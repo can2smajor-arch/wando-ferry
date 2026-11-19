@@ -219,6 +219,10 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
 .segx{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px;background:var(--deck);border:1px solid var(--line);border-radius:12px;padding:5px}
 .segx button{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:8px;padding:9px 4px;background:transparent;color:var(--mute);cursor:pointer;word-break:keep-all;line-height:1.3}
 .segx button[aria-pressed="true"]{background:var(--sea);color:var(--on-sea)}
+.sunrow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sunrow div{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:2px}
+.sunrow span{font-size:12px;color:var(--mute)}
+.sunrow b{font-size:17px;font-variant-numeric:tabular-nums}
 .badge-old{font-size:11px;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:1px 6px;font-weight:600}
 .ships{font-size:12px;color:var(--mute)}
 .empty{font-size:14px;color:var(--mute);line-height:1.5}
@@ -273,6 +277,7 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
       <h2><span><span id="wxname">날씨</span> <span id="wxbadge"></span></span><small id="wxsrc">기상청 단기예보</small></h2>
       <div class="wxwarn" id="wxwarn"></div>
       <div id="wxbody" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div class="sunrow" id="sun" aria-label="일출·일몰"></div>
     </section>
 
     <section class="card" id="tide">
@@ -506,7 +511,7 @@ function renderRoutes(){
   const d=komsaData(),lu=document.getElementById('liveinfo');
   lu.textContent=d&&d.sample?'예시 자료입니다.':d&&d.live?(d.offline||navigator.onLine===false?'인터넷 연결 없음 · 마지막으로 받은 ':'')+'실시간 운항정보 '+kstTime(KOMSA?KOMSA.fetched:'')+' 기준 (해양교통안전공단)':KOMSA_ERR?KOMSA_ERR:'실시간 운항정보 불러오는 중…';
 }
-function renderAll(){renderToday();if(cur()){renderGroups();renderRoutes()}if(!document.getElementById('picker').hidden)renderPicker()}
+function renderAll(){renderToday();renderSun();if(cur()){renderGroups();renderRoutes()}if(!document.getElementById('picker').hidden)renderPicker()}
 function setDir(x){dir=x;saveSel();renderRoutes()}
 
 // 지역이 바뀔 때 한 번 그리는 것들 (밴드·연락처·출처)
@@ -634,6 +639,8 @@ function renderTide(){
   const X=m=>L+(W-L-Rr)*m/1440,Y=c=>T+(H-T-B)*(1-(c-lo)/(hi-lo));
   let pts=[];for(let m=0;m<=1440;m+=10){const c=level(base+m);if(c!==null)pts.push([X(m),Y(c)])}
   let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="하루 조위 곡선">';
+  const sn=sunTimes(viewDay,+R.tide.lat,+R.tide.lot);
+  if(sn){svg+='<rect x="'+X(0)+'" y="'+T+'" width="'+(X(sn.rise)-X(0)).toFixed(1)+'" height="'+(H-T-B)+'" fill="var(--mute)" opacity=".1"/><rect x="'+X(sn.set).toFixed(1)+'" y="'+T+'" width="'+(X(1440)-X(sn.set)).toFixed(1)+'" height="'+(H-T-B)+'" fill="var(--mute)" opacity=".1"/>';}
   [0,6,12,18,24].forEach(h=>{svg+='<line x1="'+X(h*60)+'" x2="'+X(h*60)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--line)" stroke-width="1"/><text x="'+X(h*60)+'" y="'+(H-6)+'" font-size="10" fill="var(--mute)" text-anchor="'+(h===0?'start':h===24?'end':'middle')+'">'+h+'시</text>'});
   if(pts.length>1){const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
     svg+='<path d="'+line+' L'+pts[pts.length-1][0].toFixed(1)+' '+(H-B)+' L'+pts[0][0].toFixed(1)+' '+(H-B)+' Z" fill="var(--tide)" opacity=".16"/><path d="'+line+'" fill="none" stroke="var(--tide)" stroke-width="2.5" stroke-linejoin="round"/>';}
@@ -645,6 +652,29 @@ function renderTide(){
   const bed=TIDE_SRC==='live'&&TIDE_META&&TIDE_META.kind==='bed';
   document.getElementById('tidebase').textContent=bed?R.tide.label+' 기준':'완도항 예보 기준';
   document.getElementById('tidesrc').textContent=TIDE_SRC==='live'?(bed?R.tide.label+' 예측 조위'+(TIDE_META.base?' ('+TIDE_META.base+' 기준'+(TIDE_META.josi?' '+TIDE_META.josi:'')+')':'')+' · 국립해양조사원 · '+kstTime(TIDE_META.fetched)+' 갱신':'국립해양조사원 완도 예보 · '+kstTime(TIDE_META.fetched)+' 갱신 · '+R.tide.label+'과는 시각 차이가 날 수 있습니다.'):'비상용 저장 자료(완도항, 11/17~11/30)입니다. '+R.tide.label+'과는 차이가 날 수 있습니다.';
+  document.getElementById('tidesrc').textContent+=' 그래프의 옅은 회색은 해가 진 시간입니다.';
+}
+
+// ───────── 일출·일몰 (API 없이 위경도로 계산, NOAA 근사식 · 1~2분 오차) ─────────
+// 반환: 한국시간 하루 중 분 {rise, set} (해가 안 뜨거나 안 지면 null)
+function sunTimes(dateStr,lat,lon){
+  const[y,m,d]=dateStr.split('-').map(Number);
+  const n=Math.round((Date.UTC(y,m-1,d)-Date.UTC(y,0,1))/864e5)+1;
+  const days=(y%4===0&&y%100!==0)||y%400===0?366:365;
+  const g=2*Math.PI/days*(n-1),R=Math.PI/180;
+  const eq=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const dec=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const c=Math.cos(90.833*R)/(Math.cos(lat*R)*Math.cos(dec))-Math.tan(lat*R)*Math.tan(dec);
+  if(c<-1||c>1)return null;
+  const ha=Math.acos(c)/R;
+  return{rise:720-4*(lon+ha)-eq+540,set:720-4*(lon-ha)-eq+540};
+}
+function renderSun(){
+  const R=cur(),box=document.getElementById('sun');if(!R||!box)return;
+  const k=kst(),lat=+R.tide.lat,lon=+R.tide.lot,t=sunTimes(ymd(k),lat,lon),tm=sunTimes(fromDayNum(dayNum(ymd(k))+1),lat,lon);
+  if(!t){box.innerHTML='';return}
+  box.innerHTML='<div><span>일출</span><b>'+hm(t.rise)+'</b></div><div><span>일몰</span><b>'+hm(t.set)+'</b></div><div><span>'+(k.min>t.set?'내일 일출':'낮 길이')+'</span><b>'+(k.min>t.set&&tm?hm(tm.rise):dur(t.set-t.rise))+'</b></div>';
+  box.title=R.tide.label+' 위치로 계산한 값입니다(1~2분 차이 가능).';
 }
 
 // ───────── 날씨 (기상청 단기예보, 지역 격자) ─────────
