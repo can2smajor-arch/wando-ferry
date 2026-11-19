@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "완도뱃길 – 완도 섬 배·물때·날씨",
+  "short_name": "완도뱃길",
+  "description": "완도군 모든 여객선 시간표·운항 통제·내일 운항예보, 섬마다 날씨·물때",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f6f5",
+  "theme_color": "#123d63",
+  "lang": "ko",
+  "icons": [
+    {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

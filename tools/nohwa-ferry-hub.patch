@@ -1,0 +1,52 @@
+diff --git a/netlify/functions/api.mjs b/netlify/functions/api.mjs
+index a0a158c..fa1b1f2 100644
+--- a/netlify/functions/api.mjs
++++ b/netlify/functions/api.mjs
+@@ -32,16 +32,29 @@ function json(body, cacheSeconds) {
+ }
+ 
+ async function getJson(url, params) {
+-  const qs = new URLSearchParams(params).toString();
+-  const res = await fetch(`${url}?${qs}`, { signal: AbortSignal.timeout(15000) });
++  const qs = params ? "?" + new URLSearchParams(params).toString() : "";
++  const res = await fetch(`${url}${qs}`, { signal: AbortSignal.timeout(15000) });
+   const text = await res.text();
+   let data;
+   try { data = JSON.parse(text); } catch { throw new Error("응답이 JSON이 아님: " + text.slice(0, 200)); }
+   return data;
+ }
+ 
++// 오늘 운항: 완도뱃길 허브(/api/komsa)의 자료를 받아 노화도 항로만 고름.
++// KOMSA 개발계정 하루 100회를 두 앱이 나눠 쓰므로, KOMSA는 허브 한 곳만 부름.
++// 허브에 접속 자체가 안 될 때만 KOMSA를 직접 부름(허브가 KOMSA 오류를 알린 경우는 직접 부르지 않음).
++const HUB_URL = process.env.KOMSA_HUB_URL || "https://wando-ferry.netlify.app/api/komsa";
+ async function ferry(key) {
+   const date = kstDate();
++  let hub = null;
++  try { hub = await getJson(HUB_URL); } catch (e) { hub = null; }
++  if (hub && hub.src === "wando") {
++    if (!hub.ok) throw new Error(hub.error || "허브 운항정보 오류");
++    const out = (hub.items || [])
++      .filter((x) => ROUTES.some((r) => (x.route || "").includes(r)))
++      .map((x) => ({ t: x.t, ship: x.ship, from: x.from, route: x.route, se: x.se, stts: x.stts, reason: x.reason || "" }));
++    return { ok: true, date: hub.date, fetched: hub.fetched, via: "hub", items: out };
++  }
+   const data = await getJson(FERRY_URL, {
+     serviceKey: key, pageNo: "1", numOfRows: "1000", dataType: "JSON", rlvtYmd: date,
+   });
+@@ -58,12 +71,12 @@ async function ferry(key) {
+       ship: x.psnshp_nm,
+       from: x.oport_nm,
+       route: x.nvg_seawy_nm,
+-      se: x.nvg_se_nm,        // 정상 / 통제 / 비운 / 증선
+-      stts: x.nvg_stts_nm,    // 출항전 / 출항 등
++      se: x.nvg_se_nm,
++      stts: x.nvg_stts_nm,
+       reason: x.cntrl_rsn_nm || x.nnavi_rsn_nm || x.cnls_etc_rsn || "",
+     }))
+     .sort((a, b) => a.t.localeCompare(b.t));
+-  return { ok: true, date, fetched: new Date().toISOString(), items: out };
++  return { ok: true, date, fetched: new Date().toISOString(), via: "komsa", items: out };
+ }
+ 
+ async function tideDay(key, date) {
