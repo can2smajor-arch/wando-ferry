@@ -67,7 +67,7 @@
     nohwa: { name: '노화농협', url: 'https://band.us/band/77170845', sub: '산양·땅끝·넙도', re: /노화농협/ },
     haekwang: { name: '해광운수', url: 'https://band.us/band/99139814', sub: '산양·땅끝', re: /해광운수/ }, // 땅끝↔산양(노화) 공지만 올라옴
     dangmok: { name: '약산 당목항', url: 'https://band.us/@wandoyagsan', sub: '금일·생일', re: /당목/ },
-    geumdang: { name: '금당도', url: 'https://band.us/band/96900810', sub: '가학·노력', re: /금당/ },
+    geumdang: { name: '완도농협 금당지점', url: 'https://band.us/band/96900810', sub: '노력↔가학 (완농페리2호)', re: /금당지점|완농페리2/ },
     cheongsan: { name: '청산도 선박운항시간표', url: 'https://band.us/@cheongsannonghyup', sub: '청산·완도', re: /청산도\s*선박/ },
   };
   const TEL_HH = [['동천 매표소', '061-553-5635'], ['화흥포 매표소', '061-555-1010'], ['소안농협 (선사)', '061-553-8188']];
