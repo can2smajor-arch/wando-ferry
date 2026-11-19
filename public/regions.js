@@ -67,7 +67,8 @@
     nohwa: { name: '노화농협', url: 'https://band.us/band/77170845', sub: '산양·땅끝·넙도', re: /노화농협/ },
     haekwang: { name: '해광운수', url: 'https://band.us/band/99139814', sub: '산양·땅끝', re: /해광운수/ }, // 땅끝↔산양(노화) 공지만 올라옴
     dangmok: { name: '약산 당목항', url: 'https://band.us/@wandoyagsan', sub: '금일·생일', re: /당목/ },
-    cheongsan: { name: '청산도 선박운항시간표', url: 'https://band.us/band/96900810', sub: '청산·완도', re: /청산도\s*선박/ },
+    geumdang: { name: '금당도', url: 'https://band.us/band/96900810', sub: '가학·노력', re: /금당/ },
+    cheongsan: { name: '청산도 선박운항시간표', url: 'https://band.us/@cheongsannonghyup', sub: '청산·완도', re: /청산도\s*선박/ },
   };
   const TEL_HH = [['동천 매표소', '061-553-5635'], ['화흥포 매표소', '061-555-1010'], ['소안농협 (선사)', '061-553-8188']];
   const TEL_TK = [['산양 매표소', '061-553-6107'], ['땅끝 매표소', '061-535-4268'], ['해광운수 땅끝 매표소', '061-535-5786'], ['노화농협 (선사)', '061-553-5688']];
@@ -197,7 +198,7 @@
         { id: 'nr', label: '노력', lines: [L(RE.gahak, '가학항 → 노력항', '노력항 → 가학항', '완도농협 · 약 20분')], tmr: byRe(/가학|노력/) },
         { id: 'nd', label: '고흥 쪽', optional: true, lines: [L(RE.geumdangNd, '금당 → 녹동·우두', '녹동·우두 → 금당', '고흥 쪽 선사')], tmr: byRe(RE.geumdangNd) },
       ],
-      bands: [], tels: [], links: [],
+      bands: [BAND.geumdang], tels: [], links: [],
     },
     {
       id: 'deogu', name: '덕우·황제', title: '덕우도·황제도', desc: '완도↔덕우(모황·생일 경유)',
