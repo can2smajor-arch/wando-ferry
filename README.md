@@ -8,6 +8,11 @@
 - `netlify/functions/api.mjs` — 공공데이터 중계 함수
 - `tools/` — 아이콘 만들기, 서버 함수 점검(`node tools/test-api.mjs`), 노화뱃길 수정안(`nohwa-ferry-hub.patch`)
 
+## 지역 주소 (카톡 미리보기에 지역 이름)
+- `/wando/` `/nohwa/` `/soan/` `/cheongsan/` `/geumil/` `/saengil/` `/geumdang/` `/deogu/` — 열면 그 지역 화면이 바로 나오고, 카톡에 보내면 "완도뱃길 – 청산 배·물때·날씨" 제목과 지역 그림(`public/og/지역.png`)이 붙습니다.
+- 앱 안 '친구에게 보내기'도 지금 보고 있는 지역 주소를 보냅니다.
+- `public/index.html`이나 `regions.js`를 고친 뒤에는 반드시 다시 만듭니다: `node tools/build-pages.mjs && python3 tools/make_icons.py`
+
 ## 서버 경로
 | 경로 | 내용 | 캐시 |
 |---|---|---|

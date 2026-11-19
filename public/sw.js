@@ -10,7 +10,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  const key = req.mode === 'navigate' ? '/' : url.pathname; // 쿼리 무시
+  const key = url.pathname; // 쿼리 무시 (지역 주소 /cheongsan/ 등은 따로 보관)
   e.respondWith((async () => {
     try {
       const res = await fetch(req);

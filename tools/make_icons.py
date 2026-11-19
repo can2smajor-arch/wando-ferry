@@ -42,3 +42,19 @@ d.text((430, 140), "완도뱃길", font=ImageFont.truetype(F, 112), fill="white"
 d.text((436, 290), "청산·노화·보길·소안·금일·생일·금당·덕우", font=ImageFont.truetype(F, 38), fill=(255, 209, 102))
 d.text((436, 350), "배 시간 · 운항 통제 · 날씨 · 물때", font=ImageFont.truetype(F, 40), fill=(234, 246, 246))
 og.save(f"{OUT}/og.png", optimize=True)
+
+# 지역별 카톡 미리보기 (tools/regions.json 은 build-pages.mjs 가 만듦)
+import json, os
+os.makedirs(f"{OUT}/og", exist_ok=True)
+for r in json.load(open(os.path.join(os.path.dirname(__file__), "regions.json"))):
+    im = og.copy(); d = ImageDraw.Draw(im)
+    d.rectangle([420, 120, 1200, 420], fill=None)
+    # 글자 자리 다시 칠하기
+    for y in range(120, 430):
+        f = y / 630; d.line([(420, y), (1200, y)], fill=tuple(int(TOP[i] + (BOT[i] - TOP[i]) * f) for i in range(3)))
+    d.text((430, 120), "완도뱃길", font=ImageFont.truetype(F, 52), fill=(234, 246, 246))
+    name = r["name"]; size = 112 if len(name) <= 4 else 92
+    d.text((426, 182), name, font=ImageFont.truetype(F, size), fill="white")
+    d.text((436, 320), r["title"], font=ImageFont.truetype(F, 40), fill=(255, 209, 102))
+    d.text((436, 378), "배 시간 · 운항 통제 · 날씨 · 물때", font=ImageFont.truetype(F, 36), fill=(234, 246, 246))
+    im.save(f"{OUT}/og/{r['id']}.png", optimize=True)

@@ -1,0 +1,42 @@
+[
+ {
+  "id": "wando",
+  "name": "완도읍",
+  "title": "완도항·화흥포에서 출발"
+ },
+ {
+  "id": "nohwa",
+  "name": "노화·보길",
+  "title": "노화도·보길도·넙도"
+ },
+ {
+  "id": "soan",
+  "name": "소안",
+  "title": "소안도·당사도·횡간도"
+ },
+ {
+  "id": "cheongsan",
+  "name": "청산",
+  "title": "청산도·여서도·장도·모도"
+ },
+ {
+  "id": "geumil",
+  "name": "금일",
+  "title": "금일도 (일정·동송)"
+ },
+ {
+  "id": "saengil",
+  "name": "생일",
+  "title": "생일도 (서성·용출)"
+ },
+ {
+  "id": "geumdang",
+  "name": "금당",
+  "title": "금당도 (가학)"
+ },
+ {
+  "id": "deogu",
+  "name": "덕우·황제",
+  "title": "덕우도·황제도"
+ }
+]

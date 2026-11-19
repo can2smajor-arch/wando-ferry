@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>완도뱃길 – 소안 배·물때·날씨</title>
+<meta name="theme-color" content="#123d63">
+<meta name="apple-mobile-web-app-title" content="완도뱃길">
+<meta name="description" content="소안도·당사도·횡간도 · 소안↔화흥포(동천 경유), 이목↔당사, 섬순회·횡간. 다음 배·운항 통제·내일 운항예보·날씨·물때를 한 화면에">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wando-ferry.netlify.app/soan/">
+<meta property="og:title" content="완도뱃길 – 소안 배·물때·날씨">
+<meta property="og:description" content="소안도·당사도·횡간도 · 소안↔화흥포(동천 경유), 이목↔당사, 섬순회·횡간. 다음 배·운항 통제·내일 운항예보·날씨·물때를 한 화면에">
+<meta property="og:image" content="https://wando-ferry.netlify.app/og/soan.png?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* 배치: 폰 한 손 화면. 위에서부터 오늘 요약 → 방향 선택 → 항로별 다음 배 → 물때 곡선 → 결항 문의 */
+:root{
+  --sea:#0d4f5c;        /* 깊은 바다: 머리띠, 큰 숫자 */
+  --foam:#f2f6f5;       /* 바탕 */
+  --deck:#ffffff;       /* 카드 */
+  --ink:#12292e;        /* 본문 */
+  --mute:#5c7378;       /* 보조 글씨 */
+  --line:#d5e0df;       /* 선 */
+  --buoy:#e8590c;       /* 부표 주황: 다음 배, 지금 표시 */
+  --warn:#b54708;       /* 확인 필요 */
+  --tide:#2a8fa3;       /* 물때 곡선 */
+  --on-sea:#eaf6f6;
+  --f-display:"Do Hyeon","IBM Plex Sans KR",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sea:#0b3c47; --foam:#0c1a1d; --deck:#13262a; --ink:#e4efee; --mute:#93aaad;
+    --line:#24393d; --buoy:#ff8a4c; --warn:#f0a860; --tide:#55bdd0; --on-sea:#e4f3f3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --sea:#0b3c47; --foam:#0c1a1d; --deck:#13262a; --ink:#e4efee; --mute:#93aaad;
+  --line:#24393d; --buoy:#ff8a4c; --warn:#f0a860; --tide:#55bdd0; --on-sea:#e4f3f3;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--foam);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px;padding:0 16px 32px}
+header{background:var(--sea);color:var(--on-sea);margin:0 -16px;padding:20px 16px 18px;display:flex;flex-direction:column;gap:10px}
+h1{font-family:var(--f-display);font-weight:400;font-size:28px;line-height:1.1;margin:0;letter-spacing:.01em}
+.today{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:14px}
+.pill{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:2px 10px;font-size:13px;white-space:nowrap}
+.pill.strong{background:var(--on-sea);color:var(--sea);border-color:transparent;font-weight:600}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--deck);border:1px solid var(--line);border-radius:12px;padding:5px}
+.seg button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 6px;background:transparent;color:var(--mute);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sea);color:var(--on-sea)}
+.seg3 button{position:relative}.seg3 .ctl{display:inline-block;margin-left:4px;background:#d63a1f;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;vertical-align:1px}
+.seg3{grid-template-columns:1fr 1fr 1.25fr}.seg3 button{padding:9px 4px;font-size:14px;word-break:keep-all}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--buoy);outline-offset:2px}
+.card{background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{font-size:16px;font-weight:600;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card h2 small{font-weight:400;color:var(--mute);font-size:13px}
+.next{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.next .t{font-family:var(--f-display);font-size:52px;line-height:1;color:var(--sea);font-variant-numeric:tabular-nums}
+:root[data-theme="dark"] .next .t{color:var(--on-sea)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .next .t{color:var(--on-sea)}}
+.next .in{color:var(--buoy);font-weight:600;font-size:17px}
+.sub{color:var(--mute);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:14px;background:var(--foam)}
+.chip.past{opacity:.4;text-decoration:line-through}
+.chip.now{border-color:var(--buoy);color:var(--buoy);font-weight:600}
+.chip.unsure{border-style:dashed;border-color:var(--warn);color:var(--warn)}
+.chip i{font-style:normal;font-size:11px;margin-left:4px;color:var(--mute)}
+details summary{cursor:pointer;color:var(--sea);font-weight:500;font-size:14px;padding:4px 0}
+:root[data-theme="dark"] details summary{color:var(--tide)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) details summary{color:var(--tide)}}
+details .chips{margin-top:8px}
+.note{font-size:13px;color:var(--warn);border-left:3px solid var(--warn);padding-left:10px}
+.tidehead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mul{font-family:var(--f-display);font-size:34px;line-height:1;color:var(--tide)}
+.daynav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.daynav button{font:inherit;border:1px solid var(--line);background:var(--foam);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.daynav button:disabled{opacity:.35;cursor:default}
+.daynav span{font-weight:600;font-variant-numeric:tabular-nums}
+svg{width:100%;height:auto;display:block}
+.ev{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ev div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.ev b{font-variant-numeric:tabular-nums;font-size:17px}
+.ev span{font-size:12px;color:var(--mute)}
+.tel{display:flex;flex-direction:column;gap:0}
+.tel a,.tel div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line);color:var(--ink);text-decoration:none}
+.tel a:first-child{border-top:0}
+.tel a b{font-variant-numeric:tabular-nums;color:var(--sea);font-weight:600}
+:root[data-theme="dark"] .tel a b{color:var(--tide)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tel a b{color:var(--tide)}}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{border:1px solid var(--sea);color:var(--sea);border-radius:999px;padding:6px 12px;font-size:14px;text-decoration:none;font-weight:500}
+:root[data-theme="dark"] .links a{border-color:var(--tide);color:var(--tide)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .links a{border-color:var(--tide);color:var(--tide)}}
+.alert{background:#fde8e4;color:#8a1c0b;border:1px solid #f3b7a9;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.alert b{font-size:15px}
+:root[data-theme="dark"] .alert{background:#3a1a14;color:#ffb4a3;border-color:#6b2a1e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .alert{background:#3a1a14;color:#ffb4a3;border-color:#6b2a1e}}
+.live{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;align-self:center}
+.live.ok{background:#e3f4ea;color:#17663a}
+.live.none{background:var(--foam);color:var(--mute);border:1px solid var(--line)}
+:root[data-theme="dark"] .live.ok{background:#173a26;color:#8fe0b0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .live.ok{background:#173a26;color:#8fe0b0}}
+.chip.stop{border-color:#c4320a;color:#c4320a;text-decoration:line-through}
+.chip.stop i{color:#c4320a}
+.stopnote{font-size:13px;color:#c4320a;font-weight:500}
+.stop-t{font-size:36px!important;color:#c4320a!important}
+.liveinfo{font-size:12px;color:var(--mute);text-align:center}
+.warnbox{background:#fff1d6;border:1px solid #f0b54a;color:#5c3a00;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.45;word-break:keep-all}
+.warnbox b{font-size:15px;color:#7a2e00}
+.warnbox small{font-size:12px;color:#7a5a20}
+.wxwarn{font-size:13px;color:var(--mute)}
+.bandbar{background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.bandbar .ttl{font-size:14px;font-weight:700}
+.bandbar .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.bandbar a{display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:10px;padding:9px 4px;background:#e9f6ee;color:#145c33;text-decoration:none;font-weight:700;font-size:14px;text-align:center;word-break:keep-all}
+.bandbar a small{font-weight:500;font-size:11px;color:#3d6b50}
+.extra{font-size:13px;color:var(--sea);background:rgba(13,79,92,.07);border-radius:8px;padding:6px 10px}
+.hdr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.bigbtn{flex:0 0 auto;font:inherit;font-size:13px;font-weight:700;color:var(--on-sea);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 11px;cursor:pointer}
+.bigbtn[aria-pressed="true"]{background:#ffd166;color:#12292e;border-color:#ffd166}
+html.big{zoom:1.2}
+.tmr-route{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.tmr-route:first-of-type{border-top:0;padding-top:0}
+.signal{display:flex;gap:5px;background:#2b3133;border-radius:10px;padding:6px 7px}
+.signal i{width:18px;height:18px;border-radius:50%;background:#5c6466;display:block}
+.signal i.on.g{background:#2fd16b;box-shadow:0 0 8px #2fd16b}
+.signal i.on.y{background:#ffc93d;box-shadow:0 0 8px #ffc93d}
+.signal i.on.r{background:#ff4b3e;box-shadow:0 0 8px #ff4b3e}
+.tmr-name{font-weight:600;font-size:15px}
+.tmr-sum{font-size:13px;color:var(--mute)}
+.tmr-table{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tmr-table div{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.tmr-table span{font-size:12px;color:var(--mute)}
+.tmr-table b{font-size:15px}
+.tmr-table .st-g b{color:#17803f}.tmr-table .st-y b{color:#a86a00}.tmr-table .st-r b{color:#c4320a}.tmr-table .st-n b{color:var(--mute);font-weight:500}
+:root[data-theme="dark"] .tmr-table .st-g b{color:#6fe39a}:root[data-theme="dark"] .tmr-table .st-y b{color:#ffd166}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tmr-table .st-g b{color:#6fe39a}:root:not([data-theme="light"]) .tmr-table .st-y b{color:#ffd166}}
+.badge-ex{font-size:11px;border:1px dashed var(--warn);color:var(--warn);border-radius:6px;padding:1px 6px;font-weight:500}
+.notice{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.notice:first-child{border-top:0;padding-top:0}
+.notice .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:13px}
+.notice .who b{font-size:14px}
+.notice .who .tag{font-size:11px;border-radius:999px;padding:1px 8px;background:var(--foam);border:1px solid var(--line);color:var(--mute)}
+.notice .who .tag.tk{background:#fff1e6;border-color:#f6c9a5;color:#a14a00}
+.notice .who .tag.hh{background:#e6f3f5;border-color:#a9d3db;color:#0d4f5c}
+.notice .who .ago{color:var(--mute)}
+.notice .who .new{font-size:11px;color:#fff;background:#c4320a;border-radius:6px;padding:0 6px}
+.notice p{margin:0;white-space:pre-line;font-size:15px;line-height:1.55}
+.notice.stop p{color:#c4320a;font-weight:500}
+.notice img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
+.notice .more{font-size:13px}
+.wx-now{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.wx-now .temp{font-family:var(--f-display);font-size:48px;line-height:1;color:var(--sea)}
+:root[data-theme="dark"] .wx-now .temp{color:var(--on-sea)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wx-now .temp{color:var(--on-sea)}}
+.wx-now .cond{font-size:17px;font-weight:600}
+.wx-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.wx-stats div{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:2px}
+.wx-stats span{font-size:12px;color:var(--mute)}
+.wx-stats b{font-size:17px;font-variant-numeric:tabular-nums}
+.wx-stats small{font-size:12px}
+.lv-g{color:#17803f}.lv-y{color:#a86a00}.lv-r{color:#c4320a}
+:root[data-theme="dark"] .lv-g{color:#6fe39a}:root[data-theme="dark"] .lv-y{color:#ffd166}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .lv-g{color:#6fe39a}:root:not([data-theme="light"]) .lv-y{color:#ffd166}}
+.wx-hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.wx-hours div{flex:0 0 auto;min-width:62px;border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;display:flex;flex-direction:column;gap:1px;font-size:12px;font-variant-numeric:tabular-nums}
+.wx-hours b{font-size:15px}
+.wx-days{display:flex;flex-direction:column}
+.wx-day{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.wx-day .dn{font-weight:600}
+.wx-day .mm{font-variant-numeric:tabular-nums;white-space:nowrap}
+.wx-day .ex{grid-column:2/-1;font-size:12px;color:var(--mute);margin-top:-4px}
+.trial{background:#fff6dc;border:1px solid #f0d27a;color:#6b4a00;border-radius:10px;padding:6px 12px;font-size:13px;text-align:center;line-height:1.5;word-break:keep-all}
+.trial b{font-weight:700}
+:root[data-theme="dark"] .trial{background:#3a2f12;border-color:#6b5420;color:#ffd98a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .trial{background:#3a2f12;border-color:#6b5420;color:#ffd98a}}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions-ttl{font-size:13px;color:var(--mute);text-align:center;margin-bottom:-6px}
+.actions button{font:inherit;font-weight:600;font-size:15px;border-radius:12px;padding:12px 8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px}
+.actions .install{background:var(--sea);color:var(--on-sea);border:0}
+.actions .share{background:var(--deck);color:var(--ink);border:1px solid var(--line)}
+.actions svg{width:18px;height:18px;flex:none}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#12292e;color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.5;max-width:min(90vw,420px);box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10;word-break:keep-all}
+footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4px}
+</style>
+
+<style>
+/* ── 완도뱃길 추가 ── */
+:root{--sea:#123d63;--tide:#2a7fb8}
+.brand{font-size:13px;font-weight:600;letter-spacing:.04em;opacity:.8}
+.regbtn{flex:0 0 auto;font:inherit;font-size:13px;font-weight:700;color:var(--sea);background:var(--on-sea);border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+.hdr-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.hsub{font-size:14px;opacity:.9;margin-top:-4px}
+.picker{display:flex;flex-direction:column;gap:10px}
+.picker .lead{font-size:15px;line-height:1.5;word-break:keep-all}
+.regions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.regions button{font:inherit;text-align:left;border:1px solid var(--line);background:var(--deck);color:var(--ink);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-height:92px}
+.regions button b{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.1;color:var(--sea);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+:root[data-theme="dark"] .regions button b{color:var(--on-sea)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .regions button b{color:var(--on-sea)}}
+.regions button span{font-size:13px;font-weight:600}
+.regions button small{font-size:12px;color:var(--mute);line-height:1.4;word-break:keep-all}
+.regions button[aria-current="true"]{border-color:var(--sea);box-shadow:0 0 0 2px var(--sea) inset}
+.regions .ctl,.segx .ctl{display:inline-block;background:#d63a1f;color:#fff;font-family:var(--f-body);font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;vertical-align:1px}
+.segx{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px;background:var(--deck);border:1px solid var(--line);border-radius:12px;padding:5px}
+.segx button{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:8px;padding:9px 4px;background:transparent;color:var(--mute);cursor:pointer;word-break:keep-all;line-height:1.3}
+.segx button[aria-pressed="true"]{background:var(--sea);color:var(--on-sea)}
+.badge-old{font-size:11px;border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:1px 6px;font-weight:600}
+.ships{font-size:12px;color:var(--mute)}
+.empty{font-size:14px;color:var(--mute);line-height:1.5}
+.sample-bar{background:#e8f0ff;border:1px solid #9db8e8;color:#16325c;border-radius:10px;padding:6px 12px;font-size:13px;text-align:center;line-height:1.5;word-break:keep-all}
+:root[data-theme="dark"] .sample-bar{background:#16233a;border-color:#2f4a78;color:#bcd2ff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sample-bar{background:#16233a;border-color:#2f4a78;color:#bcd2ff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hdr-top">
+      <div><div class="brand">완도뱃길</div><h1 id="rname">완도 섬 배·물때·날씨</h1></div>
+      <div class="hdr-btns"><button type="button" class="regbtn" id="btn-region" hidden>지역 바꾸기</button><button type="button" class="bigbtn" id="btn-big" aria-pressed="false">가 큰 글씨</button></div>
+    </div>
+    <div class="hsub" id="rtitle"></div>
+    <div class="today" id="today"></div>
+  </header>
+
+  <div class="trial" role="note"><b>시험 운영 중</b> · 출발 전 선사·매표소에 꼭 확인하세요.</div>
+  <div class="sample-bar" id="samplebar" hidden>미리보기 화면입니다. 배 시간·통제·날씨는 <b>예시(가짜) 자료</b>입니다.</div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <section class="picker" id="picker" hidden>
+    <div class="lead" id="pickerlead"><b>어느 섬 배를 볼까요?</b><br>사는 곳이나 가려는 섬을 고르세요. 고른 지역은 다음에 열 때도 기억합니다.</div>
+    <div class="regions" id="regions"></div>
+  </section>
+
+  <main id="main" style="display:flex;flex-direction:column;gap:14px" hidden>
+    <div class="segx" role="group" aria-label="노선" id="groups"></div>
+    <div class="seg" role="group" aria-label="방향">
+      <button type="button" id="btn-out" aria-pressed="true">나가기</button>
+      <button type="button" id="btn-in" aria-pressed="false">들어오기</button>
+    </div>
+
+    <div id="routes" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="liveinfo" id="liveinfo"></div>
+
+    <nav class="bandbar" aria-label="선사 밴드" id="bandbar" hidden>
+      <div class="ttl">결항·변경 공지는 선사 밴드에서 확인하세요</div>
+      <div class="row" id="bandrow"></div>
+    </nav>
+
+    <section class="card" id="tomorrow">
+      <h2><span>내일 운항예보 <span id="tmrdate"></span></span><small id="tmrsrc">매일 12시 발표</small></h2>
+      <div id="tmrbody" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div class="sub">하루 전 예측입니다. 안개는 예측할 수 없으니 당일 운항 여부를 꼭 확인하세요.</div>
+    </section>
+
+    <div class="warnbox" id="warnbox" hidden></div>
+    <section class="card" id="weather">
+      <h2><span><span id="wxname">날씨</span> <span id="wxbadge"></span></span><small id="wxsrc">기상청 단기예보</small></h2>
+      <div class="wxwarn" id="wxwarn"></div>
+      <div id="wxbody" style="display:flex;flex-direction:column;gap:12px"></div>
+    </section>
+
+    <section class="card" id="tide">
+      <h2>물때 <small id="tidebase"></small></h2>
+      <div class="tidehead"><div class="mul" id="mul"></div><div id="tidestate"></div></div>
+      <div class="daynav">
+        <button type="button" id="prev" aria-label="전날">전날</button>
+        <span id="tday"></span>
+        <button type="button" id="nextd" aria-label="다음날">다음날</button>
+      </div>
+      <div id="curve"></div>
+      <div class="ev" id="events"></div>
+      <div class="sub" id="tidesrc"></div>
+    </section>
+
+    <section class="card">
+      <h2>결항 확인·문의 <small>지역번호 061</small></h2>
+      <div class="sub">통제 표시는 해양교통안전공단 자료로 15분마다(밤에는 1시간마다) 갱신됩니다. 바람 부는 날은 출발 전에 선사나 매표소로 한 번 더 확인하세요.</div>
+      <div class="links" id="links"></div>
+      <div class="tel" id="tels"></div>
+    </section>
+  </main>
+
+  <div class="actions-ttl">이 앱을 휴대폰에 설치하거나 이웃에게 알려 주세요</div>
+  <div class="actions">
+    <button type="button" class="install" id="btn-install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>앱 설치</button>
+    <button type="button" class="share" id="btn-share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>친구에게 보내기</button>
+  </div>
+  <footer>
+    <div id="srcnote"></div>
+    <div>실시간 운항·내일 운항예보: 해양교통안전공단 · 날씨·특보: 기상청 · 물때: 국립해양조사원 TideBED(안 될 때는 완도 조석예보) — 공공데이터포털. 노선 정보: 목포지방해양수산청 완도항 여객선 취항현황, 선사 공지.</div>
+    <div>시범판 · Made by LCH</div>
+  </footer>
+</div>
+<script src="/regions.js"></script>
+<script>
+if('serviceWorker' in navigator&&location.hostname.endsWith('netlify.app')){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+const REGIONS=window.WANDO_REGIONS||[];
+const SITE='https://wando-ferry.netlify.app';
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+// ───────── 시간 (기기 설정과 무관하게 한국 시간) ─────────
+function kst(){const n=new Date(Date.now()+9*3600e3);return{y:n.getUTCFullYear(),m:n.getUTCMonth()+1,d:n.getUTCDate(),w:n.getUTCDay(),min:n.getUTCHours()*60+n.getUTCMinutes()}}
+const pad=n=>String(n).padStart(2,'0');
+const ymd=k=>k.y+'-'+pad(k.m)+'-'+pad(k.d);
+const ymd8=k=>''+k.y+pad(k.m)+pad(k.d);
+const toMin=s=>{const[a,b]=s.split(':');return +a*60+ +b};
+const t4=s=>String(s).slice(0,2)+':'+String(s).slice(2,4);
+const hm=m=>{m=((Math.round(m)%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
+const dayNum=s=>{const[a,b,c]=s.split('-');return Date.UTC(+a,+b-1,+c)/864e5};
+const fromDayNum=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())};
+function dur(m){m=Math.round(m);if(m<60)return m+'분';const h=Math.floor(m/60),r=m%60;return h+'시간'+(r?' '+r+'분':'')}
+function season(m){return(m>=10||m<=2)?'winter':'summer'}
+function kstTime(iso){try{const d=new Date(new Date(iso).getTime()+9*3600e3);return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())}catch(e){return''}}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+// 음력 날짜 → 물때 (남해안 8물때식: 음력 1일 = 8물, 8일·23일 = 조금)
+function lunar(s){
+  try{
+    const[a,b,c]=s.split('-');const dt=new Date(Date.UTC(+a,+b-1,+c,3));
+    for(const cal of['dangi','chinese']){
+      const p=new Intl.DateTimeFormat('en-u-ca-'+cal,{timeZone:'Asia/Seoul',month:'numeric',day:'numeric'}).formatToParts(dt);
+      const mo=p.find(x=>x.type==='month'),da=p.find(x=>x.type==='day');
+      if(mo&&da&&parseInt(da.value)>0)return{m:mo.value.replace(/[^0-9]/g,''),d:parseInt(da.value),leap:/bis|L/i.test(mo.value)};
+    }
+  }catch(e){}
+  return null;
+}
+function mulName(d){if(d===8||d===23)return'조금';if(d<=7)return(d+7)+'물';if(d<=22)return(d-8)+'물';return(d-23)+'물'}
+
+// 우리 서버(Netlify 함수)의 응답인지 확인: 아니면 null (미리보기 화면 등)
+let PREVIEW=false;
+async function api(path){
+  try{const r=await fetch(path,{cache:'no-store'});const j=await r.json();if(j&&j.src==='wando')return j;}catch(e){}
+  PREVIEW=true;document.getElementById('samplebar').hidden=false;return null;
+}
+
+// ───────── 지역 선택 ─────────
+let RID=null,grp=null,dir='out';
+let SEL={};try{SEL=JSON.parse(LS.get('wando-sel')||'{}')||{}}catch(e){SEL={}}
+const cur=()=>REGIONS.find(r=>r.id===RID);
+function saveSel(){SEL[RID]={g:grp,dir};LS.set('wando-sel',JSON.stringify(SEL))}
+function setRegion(id,fromUser){
+  const R=REGIONS.find(r=>r.id===id);if(!R)return;
+  RID=id;LS.set('wando-region',id);
+  const s=SEL[id]||{};grp=R.groups.some(g=>g.id===s.g)?s.g:R.groups[0].id;dir=s.dir==='in'?'in':'out';
+  document.getElementById('picker').hidden=true;document.getElementById('main').hidden=false;document.getElementById('btn-region').hidden=false;
+  document.getElementById('rname').textContent=R.name;document.getElementById('rtitle').textContent=R.title;
+  document.title='완도뱃길 – '+R.name+' 배·물때·날씨';
+  WX=null;renderStatic();renderAll();renderTomorrow();renderWeather();renderWarn();
+  resetTide();loadWeather();loadTide();
+  if(fromUser)window.scrollTo(0,0);
+}
+function openPicker(){
+  document.getElementById('picker').hidden=false;document.getElementById('main').hidden=true;
+  document.getElementById('pickerlead').innerHTML=RID?'<b>지역 바꾸기</b><br>다른 섬을 고르세요.':'<b>어느 섬 배를 볼까요?</b><br>사는 곳이나 가려는 섬을 고르세요. 고른 지역은 다음에 열 때도 기억합니다.';
+  renderPicker();window.scrollTo(0,0);
+}
+function renderPicker(){
+  const box=document.getElementById('regions');
+  box.innerHTML=REGIONS.map(r=>'<button type="button" data-r="'+r.id+'"'+(r.id===RID?' aria-current="true"':'')+'><b>'+esc(r.name)+(regionCtl(r)?' <span class="ctl">통제</span>':'')+'</b><span>'+esc(r.title)+'</span><small>'+esc(r.desc)+'</small></button>').join('');
+  box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setRegion(b.dataset.r,true)));
+}
+
+// ───────── 실시간 운항정보 (KOMSA, 서버가 완도군 항로만 골라 줌) ─────────
+let KOMSA=null,KOMSA_ERR='',KOMSA_OLD=null;
+try{KOMSA_OLD=JSON.parse(LS.get('wando-komsa')||'null')}catch(e){}
+async function loadKomsa(){
+  const j=await api('/api/komsa');
+  if(!j){KOMSA=sampleKomsa();KOMSA_ERR='';}
+  else if(j.ok&&Array.isArray(j.items)){KOMSA=j;KOMSA_ERR='';LS.set('wando-komsa',JSON.stringify({date:j.date,fetched:j.fetched,items:j.items}));KOMSA_OLD=null;}
+  else KOMSA_ERR=j.error||'운항정보를 받지 못했습니다';
+  renderAll();
+}
+// 오늘 자료면 {items, live:true}, 지난 자료뿐이면 {items, live:false, date}
+function komsaData(){
+  const today=ymd8(kst());
+  if(KOMSA&&KOMSA.date===today)return{items:KOMSA.items,live:true,sample:!!KOMSA.sample};
+  const old=KOMSA&&KOMSA.items?KOMSA:KOMSA_OLD;
+  if(old&&old.items&&old.date===today)return{items:old.items,live:true,offline:true};
+  if(old&&old.items)return{items:old.items,live:false,date:old.date};
+  return null;
+}
+const isStop=x=>x&&(x.se==='통제'||x.se==='비운');
+function liveLabel(x){if(!x)return'';if(x.se==='통제')return'통제';if(x.se==='비운')return'결항';return''}
+const lineMatch=(l,route)=>l.re.test(route||'')&&!(l.not&&l.not.test(route||''));
+// 묶음(group)에 앞으로 남은 통제가 있는지
+function groupCtl(g){
+  const d=komsaData();if(!d||!d.live)return false;const now=kst().min;
+  return d.items.some(x=>x.se==='통제'&&toMin(t4(x.t))>=now-30&&(g.ctl?g.ctl.test(x.route):g.lines.some(l=>!l.fixed&&lineMatch(l,x.route))));
+}
+function regionCtl(r){return r.groups.some(groupCtl)}
+// 고를 수 있는 묶음: optional 묶음은 오늘 자료에 배가 있을 때만
+function visibleGroups(R){
+  const d=komsaData();
+  return R.groups.filter(g=>!g.optional||!d||d.items.some(x=>g.lines.some(l=>!l.fixed&&lineMatch(l,x.route))));
+}
+
+// ───────── 배 시간 ─────────
+const OP_OF_SHIP=s=>/노화카훼리/.test(s)?'농협':/장보고/.test(s)?'해광':'';
+function norm(list){return list.map(x=>{const o=typeof x==='string'?{t:x}:{...x};o.unsure=o.t.endsWith('?');o.t=o.t.replace('?','');o.min=toMin(o.t);return o}).sort((a,b)=>a.min-b.min)}
+function chip(o,cls){
+  const st=isStop(o.live)?' stop':'';
+  return'<span class="chip '+(cls||'')+(o.unsure?' unsure':'')+st+'">'+o.t+((o.op||o.at)?'<i>'+esc(o.op||o.at)+'</i>':'')+(st?'<i>'+liveLabel(o.live)+'</i>':'')+'</span>';
+}
+// 고정 시간표 한 편(o)에 맞는 KOMSA 기록 찾기 (노화뱃길 방식)
+function matchLive(line,o){
+  const d=komsaData();if(!d||!d.live||!line.api)return null;
+  const a=line.api;let best=null,bd=1e9;
+  for(const x of d.items){
+    if(x.from!==a.port)continue;
+    if(a.re&&!a.re.test(x.route||''))continue;
+    if(o.op&&OP_OF_SHIP(x.ship)&&OP_OF_SHIP(x.ship)!==o.op)continue;
+    const df=toMin(t4(x.t))-o.min;
+    if(df<a.lo||df>a.hi)continue;
+    if(Math.abs(df)<bd){bd=Math.abs(df);best=x}
+  }
+  return best;
+}
+// 카드 본문 (다음 배 · 막배 · 남은 배 · 통제)
+function cardBody(all,k,opt){
+  const left=all.filter(o=>o.min>=k.min),run=left.filter(o=>!isStop(o.live)),nx=run[0],last=all[all.length-1];
+  const stopped=left.filter(o=>isStop(o.live));
+  let head;
+  if(!all.length){head='<div class="empty">'+(opt.emptyMsg||'오늘 이 방향으로 출발하는 배가 없습니다.')+'</div>';}
+  else if(nx){
+    const wait=nx.min-k.min;
+    const liveTxt=opt.live?(nx.live?(isStop(nx.live)?'':'<span class="live ok">운항 정상</span>'):'<span class="live none">운항정보 없음</span>'):'';
+    head='<div class="next"><span class="t">'+nx.t+'</span><span class="in">'+(wait===0?'지금 출발':dur(wait)+' 뒤 출발')+((nx.op||nx.at)?' · '+esc(nx.op||nx.at):'')+'</span>'+liveTxt+'</div>'+
+      '<div class="sub">'+(nx.unsure?'이 시각은 확인이 필요합니다. ':'')+(nx===last?'오늘 막배입니다.':'오늘 막배 '+last.t)+'</div>'+
+      (left.length>1?'<div class="chips">'+left.filter(o=>o!==nx).slice(0,4).map(o=>chip(o)).join('')+'</div>':'');
+  }else if(left.length){
+    head='<div class="next"><span class="t stop-t">운항 중단</span></div><div class="sub">남은 배가 모두 통제되었습니다. 선사 공지를 확인하세요.</div>';
+  }else{
+    head='<div class="next"><span class="t">끝</span><span class="in">오늘 배는 끝났습니다</span></div>'+(opt.firstTomorrow!==false?'<div class="sub">'+(opt.fixed?'내일 첫배 '+all[0].t+(all[0].unsure?' (확인 필요)':''):'오늘 첫배는 '+all[0].t+'였습니다')+'</div>':'');
+  }
+  const stopNote=stopped.length?'<div class="stopnote">통제·결항 '+stopped.length+'편: '+stopped.slice(0,6).map(o=>o.t).join(', ')+(stopped.length>6?' 외':'')+(stopped[0].live.reason?' ('+esc(stopped[0].live.reason)+')':'')+'</div>':'';
+  const full=all.length?'<details><summary>하루 시간표 전체 ('+all.length+'편)</summary><div class="chips">'+all.map(o=>chip(o,o.min<k.min?'past':(o===nx?'now':''))).join('')+'</div></details>':'';
+  return head+stopNote+(opt.extra||'')+full;
+}
+function renderFixed(line,k){
+  const sz=season(k.m),d=komsaData(),live=!!(d&&d.live);
+  const all=norm(line[sz]);all.forEach(o=>{o.live=matchLive(line,o)});
+  // 공단 자료에는 있는데 정기 시간표에 없는 배 (증선·임시 운항)
+  let extra=[];
+  if(live&&line.api&&line.api.lo>=-10&&line.api.hi<=10){
+    const used=new Set(all.map(o=>o.live).filter(Boolean));
+    extra=[...new Set(d.items.filter(x=>x.from===line.api.port&&(!line.api.re||line.api.re.test(x.route||''))&&!used.has(x)&&!all.some(o=>Math.abs(o.min-toMin(t4(x.t)))<=5)&&(x.se==='정상'||x.se==='증선'||x.se==='증회')&&toMin(t4(x.t))>=k.min).map(x=>t4(x.t)))].sort();
+  }
+  const extraNote=extra.length?'<div class="extra">시간표에 없는 운항 '+extra.length+'편: '+extra.slice(0,5).join(', ')+' (공단 자료, 선사 확인 필요)</div>':'';
+  const note=line.note||(sz==='winter'?line.noteW:line.noteS);
+  return'<section class="card"><h2>'+esc(line.from)+' → '+esc(line.to)+' <small>'+esc(line.by)+'</small></h2>'+cardBody(all,k,{live,fixed:true,extra:extraNote})+(note?'<div class="note">'+esc(note)+'</div>':'')+'</section>';
+}
+function renderLiveLine(R,line,k){
+  const d=komsaData();let all=[],src='',emptyMsg='';
+  if(d){
+    const seen=new Set();
+    d.items.filter(x=>lineMatch(line,x.route)&&(R.home.test(x.from)===(dir==='out'))).forEach(x=>{
+      const key=x.t+'|'+x.from+'|'+x.ship;if(seen.has(key))return;seen.add(key);
+      all.push({t:t4(x.t),min:toMin(t4(x.t)),at:x.from,ship:x.ship,live:d.live?x:null,unsure:!d.live});
+    });
+    all.sort((a,b)=>a.min-b.min);
+    if(new Set(all.map(o=>o.at)).size<2)all.forEach(o=>{o.at=''});
+    if(!d.live&&all.length)src='<span class="badge-old">'+(+d.date.slice(4,6))+'/'+(+d.date.slice(6))+' 자료</span>';
+    if(!all.length)emptyMsg=d.live?'오늘 이 방향으로 출발하는 배가 공단 자료에 없습니다.':'지난 자료에도 이 방향 배가 없습니다.';
+  }
+  if(!all.length&&line.fallback&&line.fallback[dir]){all=norm(line.fallback[dir]);src='<span class="badge-old">평소 시간표</span>';emptyMsg='';}
+  if(!d&&!all.length)emptyMsg=KOMSA_ERR?'운항정보를 받지 못했습니다. 선사·매표소에 확인하세요.':'운항정보 불러오는 중…';
+  const ships=[...new Set(all.map(o=>o.ship).filter(Boolean))];
+  const oldNote=d&&!d.live&&all.length?'<div class="note">오늘 운항정보를 받지 못해 지난 '+(+d.date.slice(4,6))+'월 '+(+d.date.slice(6))+'일 자료로 보여 줍니다. 요일·통제에 따라 다를 수 있습니다.</div>':'';
+  return'<section class="card"><h2><span>'+esc(line.title[dir])+' '+src+'</span><small>'+esc(line.by)+'</small></h2>'+
+    cardBody(all,k,{live:!!(d&&d.live),emptyMsg,firstTomorrow:true})+
+    (ships.length?'<div class="ships">배: '+ships.map(esc).join(', ')+'</div>':'')+oldNote+
+    (line.note?'<div class="note">'+esc(line.note)+'</div>':'')+'</section>';
+}
+function renderGroups(){
+  const R=cur();if(!R)return;
+  const vis=visibleGroups(R);if(!vis.some(g=>g.id===grp))grp=vis[0].id;
+  const box=document.getElementById('groups');
+  box.hidden=vis.length<2;
+  box.innerHTML=vis.map(g=>'<button type="button" data-g="'+g.id+'" aria-pressed="'+(g.id===grp)+'">'+esc(g.label)+(groupCtl(g)?' <span class="ctl">통제</span>':'')+'</button>').join('');
+  box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{grp=b.dataset.g;saveSel();renderAll()}));
+}
+function renderRoutes(){
+  const R=cur();if(!R)return;const k=kst();
+  const G=R.groups.find(g=>g.id===grp)||R.groups[0];const labels=G.dir||R.dir;
+  const bo=document.getElementById('btn-out'),bi=document.getElementById('btn-in');
+  bo.textContent=labels[0];bi.textContent=labels[1];bo.setAttribute('aria-pressed',dir==='out');bi.setAttribute('aria-pressed',dir==='in');
+  const open=[...document.querySelectorAll('#routes details')].map(x=>x.open);
+  document.getElementById('routes').innerHTML=G.lines.filter(l=>!l.fixed||l.dir===dir).map(l=>l.fixed?renderFixed(l,k):renderLiveLine(R,l,k)).join('');
+  document.querySelectorAll('#routes details').forEach((x,i)=>{x.open=!!open[i]});
+  const d=komsaData(),lu=document.getElementById('liveinfo');
+  lu.textContent=d&&d.sample?'예시 자료입니다.':d&&d.live?(d.offline||navigator.onLine===false?'인터넷 연결 없음 · 마지막으로 받은 ':'')+'실시간 운항정보 '+kstTime(KOMSA?KOMSA.fetched:'')+' 기준 (해양교통안전공단)':KOMSA_ERR?KOMSA_ERR:'실시간 운항정보 불러오는 중…';
+}
+function renderAll(){renderToday();if(cur()){renderGroups();renderRoutes()}if(!document.getElementById('picker').hidden)renderPicker()}
+function setDir(x){dir=x;saveSel();renderRoutes()}
+
+// 지역이 바뀔 때 한 번 그리는 것들 (밴드·연락처·출처)
+function renderStatic(){
+  const R=cur();
+  const bands=R.bands||[];document.getElementById('bandbar').hidden=!bands.length;
+  const row=document.getElementById('bandrow');row.style.gridTemplateColumns='repeat('+Math.max(1,bands.length)+',1fr)';
+  row.innerHTML=bands.map(b=>'<a href="'+b[1]+'">'+esc(b[0])+'<small>'+esc(b[2])+'</small></a>').join('');
+  document.getElementById('links').innerHTML=[...bands.map(b=>[b[0]+' 밴드',b[1]]),...R.links].map(l=>'<a href="'+esc(l[1])+'">'+esc(l[0])+'</a>').join('');
+  const tels=R.tels||[];
+  document.getElementById('tels').innerHTML=tels.length?tels.map(t=>'<a href="tel:'+t[1].replace(/-/g,'')+'"><span>'+esc(t[0])+'</span><b>'+t[1]+'</b></a>').join(''):'<div class="sub" style="border:0">이 지역 선사·매표소 전화번호는 확인되는 대로 넣겠습니다.</div>';
+  document.getElementById('srcnote').textContent=R.source||'';
+  document.getElementById('wxname').textContent=R.wx.label+' 날씨';
+}
+
+// ───────── 내일 운항예보 ─────────
+let TMR=null;
+async function loadTomorrow(){
+  const j=await api('/api/tomorrow');
+  TMR=!j?sampleTomorrow():(j.ok&&Array.isArray(j.rows))?j:{ok:false,msg:j.error||'운항예보를 받지 못했습니다.'};
+  renderTomorrow();
+}
+function bucketStatus(rows){
+  const live=rows.filter(x=>x.st!=='비운');
+  if(!live.length)return{st:'',n:0};
+  const stop=live.filter(x=>x.st==='통제');
+  const reason=stop.map(x=>x.rs).find(Boolean)||'';
+  if(stop.length===live.length)return{st:'결항',reason};
+  if(stop.length)return{st:'일부결항',reason};
+  return{st:'운항'};
+}
+const stCls=v=>v==='운항'?'g':(v==='검토'||v==='일부결항')?'y':v==='결항'?'r':'n';
+const stTxt=v=>v==='운항'?'운항예정':v==='검토'?'검토':v==='일부결항'?'일부 결항':v==='결항'?'결항예상':'배 없음';
+function renderTomorrow(){
+  const body=document.getElementById('tmrbody'),R=cur();if(!R)return;
+  if(!TMR){body.innerHTML='<div class="sub">불러오는 중…</div>';return}
+  if(TMR.ok&&!TMR.sample&&TMR.date<=ymd(kst()))TMR={ok:false,msg:'오늘 이후 예보를 아직 받지 못했습니다. 인터넷 연결 후 다시 열어 주세요.'};
+  if(!TMR.ok){body.innerHTML='<div class="sub">'+esc(TMR.msg||'아직 발표 전입니다. 매일 12시쯤 올라옵니다.')+'</div>';document.getElementById('tmrdate').textContent='';return}
+  const[,m,d]=TMR.date.split('-');
+  document.getElementById('tmrdate').innerHTML='('+(+m)+'/'+(+d)+')'+(TMR.sample?' <span class="badge-ex">예시</span>':'');
+  document.getElementById('tmrsrc').textContent=TMR.sample?'예시 화면':'해양교통안전공단 · 매일 12시 발표';
+  const rowsOf=[];
+  R.groups.forEach(g=>{(g.tmrRows||[{name:g.label,f:g.tmr}]).forEach(t=>{if(t.f)rowsOf.push({name:t.name,f:t.f,optional:g.optional})})});
+  const html=rowsOf.map(t=>{
+    const rows=TMR.rows.filter(t.f);if(!rows.length&&t.optional)return'';
+    const by={am:[],pm:[],night:[]};rows.forEach(x=>{const n=+x.t;(n<1200?by.am:n<1800?by.pm:by.night).push(x)});
+    const st={},det={};['am','pm','night'].forEach(b=>{const r=bucketStatus(by[b]);st[b]=r.st;det[b]=r});
+    const vals=[st.am,st.pm,st.night];
+    const worst=vals.includes('결항')?'r':(vals.includes('검토')||vals.includes('일부결항'))?'y':vals.includes('운항')?'g':'n';
+    const sum=worst==='g'?'하루 종일 운항 예상':worst==='y'?'일부 시간대 결항 예상':worst==='r'?'결항 예상 시간대 있음':'예보 정보가 없습니다';
+    const rs=['am','pm','night'].map(b=>det[b].reason).find(Boolean);
+    return'<div class="tmr-route"><div class="signal" aria-hidden="true"><i class="g'+(worst==='g'?' on':'')+'"></i><i class="y'+(worst==='y'?' on':'')+'"></i><i class="r'+(worst==='r'?' on':'')+'"></i></div>'+
+      '<div><div class="tmr-name">'+esc(t.name)+'</div><div class="tmr-sum">'+sum+'</div></div>'+
+      '<div class="tmr-table">'+[['오전',st.am],['오후',st.pm],['야간',st.night]].map(([a,x])=>'<div class="st-'+stCls(x)+'"><span>'+a+'</span><b>'+stTxt(x)+'</b></div>').join('')+'</div>'+
+      (rs?'<div class="stopnote" style="grid-column:1/-1">사유: '+esc(rs)+'</div>':'')+'</div>';
+  }).join('');
+  body.innerHTML=html||'<div class="sub">이 지역 노선의 예보가 없습니다.</div>';
+}
+
+// ───────── 물때 ─────────
+let SERIES=null,TIDE_SRC='fallback',TIDE_META=null,EV=[],T0='',T1='',PTS=[],viewDay=null;
+// 서버를 못 쓸 때 쓰는 비상용 조석(완도항, 11/17~11/30)
+const TIDE_FALLBACK=[
+ ['2026-11-17',[['02:41',222],['15:52',272]],[['08:57',135],['22:55',155]]],
+ ['2026-11-18',[['04:19',223],['17:05',270]],[['10:18',145],['23:56',140]]],
+ ['2026-11-19',[['05:44',238],['18:03',274]],[['11:40',143]]],
+ ['2026-11-20',[['06:42',264],['18:50',282]],[['00:44',118],['12:50',132]]],
+ ['2026-11-21',[['07:29',294],['19:31',291]],[['01:24',92],['13:47',115]]],
+ ['2026-11-22',[['08:12',326],['20:13',300]],[['02:02',64],['14:38',97]]],
+ ['2026-11-23',[['08:55',357],['20:54',308]],[['02:42',37],['15:26',81]]],
+ ['2026-11-24',[['09:39',382],['21:38',311]],[['03:23',13],['16:14',70]]],
+ ['2026-11-25',[['10:25',398],['22:22',309]],[['04:06',-3],['17:02',66]]],
+ ['2026-11-26',[['11:12',402],['23:08',302]],[['04:51',-9],['17:52',70]]],
+ ['2026-11-27',[['12:00',394],['23:55',289]],[['05:38',-4],['18:42',81]]],
+ ['2026-11-28',[['12:51',376]],[['06:27',13],['19:36',96]]],
+ ['2026-11-29',[['00:47',273],['13:45',351]],[['07:21',38],['20:34',110]]],
+ ['2026-11-30',[['01:47',257],['14:44',324]],[['08:20',67],['21:37',119]]]
+];
+function buildFromFallback(){
+  EV=[];TIDE_FALLBACK.forEach(([d,H,L])=>{const b=dayNum(d)*1440;H.forEach(([t,c])=>EV.push({x:b+toMin(t),c,hi:true,d,t}));L.forEach(([t,c])=>EV.push({x:b+toMin(t),c,hi:false,d,t}))});
+  EV.sort((a,b)=>a.x-b.x);T0=TIDE_FALLBACK[0][0];T1=TIDE_FALLBACK[TIDE_FALLBACK.length-1][0];
+}
+function buildFromSeries(){
+  PTS=[];Object.keys(SERIES).sort().forEach(d=>{const b=dayNum(d)*1440;SERIES[d].forEach(([m,c])=>PTS.push([b+m,c]))});
+  PTS.sort((a,b)=>a[0]-b[0]);EV=[];
+  for(let i=1;i<PTS.length-1;i++){
+    const[x0,y0]=PTS[i-1],[x1,y1]=PTS[i],[x2,y2]=PTS[i+1];
+    const hi=y1>y0&&y1>=y2,lo=y1<y0&&y1<=y2;if(!hi&&!lo)continue;
+    const h=x1-x0,den=(y0-2*y1+y2);let x=x1,c=y1;
+    if(den!==0&&x2-x1===h){const off=h*(y0-y2)/(2*den);x=x1+off;c=y1-(y0-y2)*off/(4*h);}
+    EV.push({x,c:Math.round(c),hi,d:fromDayNum(Math.floor(x/1440)),t:hm(x-Math.floor(x/1440)*1440)});
+  }
+  const ds=Object.keys(SERIES).sort();T0=ds[0];T1=ds[ds.length-1];
+}
+function resetTide(){SERIES=null;TIDE_SRC='fallback';TIDE_META=null;PTS=[];buildFromFallback();viewDay=null;renderTide()}
+async function loadTide(){
+  const id=RID,j=await api('/api/tide/'+id);
+  if(id!==RID)return;
+  if(j&&j.ok&&j.days&&Object.keys(j.days).length){SERIES=j.days;TIDE_SRC='live';TIDE_META=j;buildFromSeries();viewDay=null;}
+  renderTide();
+}
+function level(x){
+  if(TIDE_SRC==='live'){
+    if(!PTS.length||x<PTS[0][0]||x>PTS[PTS.length-1][0])return null;
+    let lo2=0,hi2=PTS.length-1;while(hi2-lo2>1){const m=(lo2+hi2)>>1;if(PTS[m][0]<=x)lo2=m;else hi2=m}
+    const[a,ya]=PTS[lo2],[b,yb]=PTS[hi2];return b===a?ya:ya+(yb-ya)*(x-a)/(b-a);
+  }
+  let i=EV.findIndex(e=>e.x>x);if(i<=0)return null;
+  const a=EV[i-1],b=EV[i],f=(x-a.x)/(b.x-a.x);
+  return a.c+(b.c-a.c)*(1-Math.cos(Math.PI*f))/2;
+}
+function renderTide(){
+  const R=cur();if(!R)return;
+  const k=kst(),today=ymd(k);
+  if(!viewDay||viewDay<T0||viewDay>T1)viewDay=(today>=T0&&today<=T1)?today:T0;
+  const lu=lunar(viewDay);
+  document.getElementById('mul').textContent=lu?mulName(lu.d):'';
+  const[,vm,vd]=viewDay.split('-');
+  document.getElementById('tday').textContent=+vm+'월 '+ +vd+'일'+(viewDay===today?' (오늘)':'')+(lu?' · 음 '+lu.m+'.'+lu.d:'');
+  document.getElementById('prev').disabled=viewDay<=T0;document.getElementById('nextd').disabled=viewDay>=T1;
+  const st=document.getElementById('tidestate'),nowX=dayNum(today)*1440+k.min,ni=EV.findIndex(e=>e.x>nowX);
+  if(today<T0||today>T1||ni<0)st.innerHTML='<div class="sub">조석 예보는 '+ +T0.slice(5,7)+'/'+ +T0.slice(8)+'~'+ +T1.slice(5,7)+'/'+ +T1.slice(8)+'분만 들어 있습니다.</div>';
+  else{const n=EV[ni];st.innerHTML='<div><b>'+(n.hi?'물 들어오는 중':'물 빠지는 중')+'</b></div><div class="sub">'+(n.hi?'만조 ':'간조 ')+n.t+'까지 '+dur(n.x-nowX)+'</div>';}
+  const base=dayNum(viewDay)*1440,W=328,H=132,L=6,Rr=6,T=14,B=22,lo=-30,hi=420;
+  const X=m=>L+(W-L-Rr)*m/1440,Y=c=>T+(H-T-B)*(1-(c-lo)/(hi-lo));
+  let pts=[];for(let m=0;m<=1440;m+=10){const c=level(base+m);if(c!==null)pts.push([X(m),Y(c)])}
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="하루 조위 곡선">';
+  [0,6,12,18,24].forEach(h=>{svg+='<line x1="'+X(h*60)+'" x2="'+X(h*60)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--line)" stroke-width="1"/><text x="'+X(h*60)+'" y="'+(H-6)+'" font-size="10" fill="var(--mute)" text-anchor="'+(h===0?'start':h===24?'end':'middle')+'">'+h+'시</text>'});
+  if(pts.length>1){const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+    svg+='<path d="'+line+' L'+pts[pts.length-1][0].toFixed(1)+' '+(H-B)+' L'+pts[0][0].toFixed(1)+' '+(H-B)+' Z" fill="var(--tide)" opacity=".16"/><path d="'+line+'" fill="none" stroke="var(--tide)" stroke-width="2.5" stroke-linejoin="round"/>';}
+  const dayEv=EV.filter(e=>e.d===viewDay);
+  dayEv.forEach(e=>{const x=X(e.x-base),y=Y(e.c);svg+='<circle cx="'+x+'" cy="'+y+'" r="3.5" fill="var(--deck)" stroke="var(--tide)" stroke-width="2"/><text x="'+Math.min(Math.max(x,18),W-18)+'" y="'+(e.hi?y-7:y+14)+'" font-size="10.5" fill="var(--ink)" text-anchor="middle">'+e.t+'</text>'});
+  if(viewDay===today){const c=level(nowX);if(c!==null){const x=X(k.min);svg+='<line x1="'+x+'" x2="'+x+'" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--buoy)" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="'+x+'" cy="'+Y(c)+'" r="5" fill="var(--buoy)"/>'}}
+  document.getElementById('curve').innerHTML=svg+'</svg>';
+  document.getElementById('events').innerHTML=dayEv.map(e=>'<div><span>'+(e.hi?'만조':'간조')+'</span><b>'+e.t+'</b><span>'+e.c+'cm</span></div>').join('');
+  const bed=TIDE_SRC==='live'&&TIDE_META&&TIDE_META.kind==='bed';
+  document.getElementById('tidebase').textContent=bed?R.tide.label+' 기준':'완도항 예보 기준';
+  document.getElementById('tidesrc').textContent=TIDE_SRC==='live'?(bed?R.tide.label+' 예측 조위'+(TIDE_META.base?' ('+TIDE_META.base+' 기준'+(TIDE_META.josi?' '+TIDE_META.josi:'')+')':'')+' · 국립해양조사원 · '+kstTime(TIDE_META.fetched)+' 갱신':'국립해양조사원 완도 예보 · '+kstTime(TIDE_META.fetched)+' 갱신 · '+R.tide.label+'과는 시각 차이가 날 수 있습니다.'):'비상용 저장 자료(완도항, 11/17~11/30)입니다. '+R.tide.label+'과는 차이가 날 수 있습니다.';
+}
+
+// ───────── 날씨 (기상청 단기예보, 지역 격자) ─────────
+let WX=null;
+const DIR16=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+const dirTxt=v=>DIR16[Math.round(((v%360)+360)%360/22.5)%16];
+const condTxt=h=>h.pty===1?'비':h.pty===2?'비/눈':h.pty===3?'눈':h.pty===4?'소나기':h.sky===1?'맑음':h.sky===3?'구름많음':'흐림';
+const windLv=w=>w>=14?'r':w>=9?'y':'g';
+const windTxt=w=>w>=14?'매우 강함':w>=9?'강함':w>=4?'보통':'약함';
+const wavLv=w=>w>=3?'r':w>=2?'y':'g';
+async function loadWeather(){
+  const id=RID,j=await api('/api/weather/'+id);if(id!==RID)return;
+  WX=!j?sampleWeather():(j.ok&&Array.isArray(j.hours))?j:{ok:false,msg:j.error};
+  renderWeather();
+}
+function renderWeather(){
+  const body=document.getElementById('wxbody');
+  if(!WX){body.innerHTML='<div class="sub">불러오는 중…</div>';return}
+  if(!WX.ok||!WX.hours||!WX.hours.length){body.innerHTML='<div class="sub">날씨 정보를 받지 못했습니다.'+(WX.msg?' ('+esc(WX.msg)+')':'')+'</div>';return}
+  document.getElementById('wxbadge').innerHTML=WX.sample?'<span class="badge-ex">예시</span>':'';
+  const b=WX.base||'';document.getElementById('wxsrc').textContent='기상청 단기예보 · '+(+b.slice(6,8))+'일 '+(+b.slice(8,10))+'시 발표';
+  const k=kst(),key=ymd8(k)+pad(Math.floor(k.min/60))+'00';
+  const H=WX.hours;let i0=H.findIndex(h=>h.d+h.t>=key);if(i0<0)i0=0;const now=H[i0];
+  const next=H.slice(i0,i0+24).filter((h,i)=>i%3===0).slice(0,8);
+  const byDay={};H.forEach(h=>{(byDay[h.d]=byDay[h.d]||[]).push(h)});
+  const today=ymd8(k);
+  const dayName=d=>{const diff=Math.round((Date.UTC(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6))-Date.UTC(k.y,k.m-1,k.d))/864e5);return diff===0?'오늘':diff===1?'내일':diff===2?'모레':(+d.slice(4,6))+'/'+(+d.slice(6))};
+  const days=Object.keys(byDay).sort().filter(d=>d>=today).slice(0,4).map(d=>{
+    const hs=byDay[d];const tmx=hs.find(h=>h.tmx!==undefined),tmn=hs.find(h=>h.tmn!==undefined);
+    const temps=hs.map(h=>h.tmp);const lo=tmn?tmn.tmn:Math.min(...temps),hi=tmx?tmx.tmx:Math.max(...temps);
+    const am=hs.filter(h=>+h.t<1200),pm=hs.filter(h=>+h.t>=1200);
+    const pick=a=>{if(!a.length)return'';const r=a.find(h=>h.pty>0);return condTxt(r||a.reduce((x,y)=>y.sky>x.sky?y:x))};
+    const w=Math.max(...hs.map(h=>h.wsd)),wv=Math.max(...hs.map(h=>h.wav||0)),pop=Math.max(...hs.map(h=>h.pop));
+    return'<div class="wx-day"><span class="dn">'+dayName(d)+'</span><span>'+(am.length?'오전 '+pick(am)+' · ':'')+'오후 '+(pick(pm)||'-')+'</span><span class="mm">'+Math.round(lo)+'° / '+Math.round(hi)+'°</span>'+
+      '<span class="ex">바람 최대 <b class="lv-'+windLv(w)+'">'+w+'m/s</b> · 파고 최대 <b class="lv-'+wavLv(wv)+'">'+wv+'m</b> · 비 확률 '+pop+'%</span></div>';
+  }).join('');
+  body.innerHTML=
+    '<div class="wx-now"><span class="temp">'+now.tmp+'°</span><div><div class="cond">'+condTxt(now)+'</div><div class="sub">'+(+now.t.slice(0,2))+'시 기준 · 습도 '+now.reh+'%</div></div></div>'+
+    '<div class="wx-stats"><div><span>바람</span><b class="lv-'+windLv(now.wsd)+'">'+now.wsd+'<small>m/s</small></b><small>'+dirTxt(now.vec)+'풍 · '+windTxt(now.wsd)+'</small></div>'+
+    '<div><span>파고</span><b class="lv-'+wavLv(now.wav||0)+'">'+(now.wav??'-')+'<small>m</small></b><small>'+((now.wav||0)>=3?'풍랑 우려':(now.wav||0)>=2?'다소 높음':'잔잔한 편')+'</small></div>'+
+    '<div><span>비 확률</span><b>'+now.pop+'<small>%</small></b><small>'+(now.pcp&&now.pcp!=='강수없음'&&now.pcp!=='0'?esc(now.pcp):'강수 없음')+'</small></div></div>'+
+    '<div class="wx-hours" aria-label="3시간 간격 예보">'+next.map(h=>'<div><span>'+(h.d===today?'':'내일 ')+(+h.t.slice(0,2))+'시</span><b>'+h.tmp+'°</b><span>'+condTxt(h)+'</span><span class="lv-'+windLv(h.wsd)+'">'+h.wsd+'m/s</span></div>').join('')+'</div>'+
+    '<div class="wx-days">'+days+'</div>'+
+    '<div class="sub">바람 9m/s 이상은 노랑, 14m/s 이상은 빨강으로 표시합니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div>';
+}
+
+// ───────── 기상특보 (지역 구역만) ─────────
+let WARN=null;
+function fmtTmFc(s){s=String(s||'');return s.length>=12?(+s.slice(6,8))+'일 '+s.slice(8,10)+':'+s.slice(10,12):''}
+async function loadWarn(){const j=await api('/api/warn');WARN=j&&j.ok?j:null;renderWarn()}
+function hitAreas(R,areas){return R.warn.filter(w=>w.re.test(areas)).map(w=>w.name)}
+function renderWarn(){
+  const R=cur(),box=document.getElementById('warnbox'),line=document.getElementById('wxwarn');
+  if(!R||!WARN){box.hidden=true;line.textContent='';return}
+  const at=fmtTmFc(WARN.at);
+  const act=[];WARN.active.forEach(x=>{const h=hitAreas(R,x.areas);if(h.length){const o=act.find(a=>a.kind===x.kind);if(o)h.forEach(n=>{if(!o.areas.includes(n))o.areas.push(n)});else act.push({kind:x.kind,areas:h})}});
+  const pre=WARN.pre.map(x=>({...x,hit:hitAreas(R,x.areas)})).filter(x=>x.hit.length);
+  if(act.length){
+    box.innerHTML='<b>⚠ '+act.map(x=>esc(x.kind)).join(' · ')+' 발효 중</b><span>'+act.map(x=>esc(x.kind)+': '+x.areas.map(esc).join(', ')).join('<br>')+'</span><small>바람·파도로 배가 통제될 수 있습니다. 기상청'+(at?' '+at+' 발표':'')+'</small>';
+    box.hidden=false;line.textContent='기상특보 발효 중 (위 안내 참고)';
+  }else if(pre.length){
+    const p=pre[0];box.innerHTML='<b>예비특보: '+esc(p.kind)+'</b><span>'+esc(p.when)+' · '+p.hit.map(esc).join(', ')+'</span><small>특보가 나올 수 있습니다. 기상청'+(at?' '+at+' 발표':'')+'</small>';
+    box.hidden=false;line.textContent='';
+  }else{box.hidden=true;line.textContent=R.wx.label+' 주변 기상특보 없음'+(at?' · 기상청 '+at+' 기준':'')}
+}
+
+// ───────── 미리보기용 예시 자료 (서버 없이 열었을 때만, 실제 시각 아님) ─────────
+function sampleKomsa(){
+  const items=[];const add=(route,from,ts,ship,mod)=>ts.forEach(t=>items.push(Object.assign({t:t.replace(':',''),ship,from,route,se:'정상',stts:'출항전',reason:''},mod&&mod[t]||{})));
+  add('완도-청산','완도',['07:00','08:30','10:30','13:00','14:30','17:00'],'청산아일랜드');
+  add('완도-청산','청산',['06:30','08:20','09:40','12:00','15:30','18:00'],'슬로시티청산도');
+  add('완도-여서(청산2회)','여서',['07:15'],'섬사랑7호',{'07:15':{se:'통제',reason:'풍랑주의보'}});
+  add('완도-여서(청산2회)','완도',['14:00'],'섬사랑7호',{'14:00':{se:'통제',reason:'풍랑주의보'}});
+  add('완도-모도(순환)','완도',['07:10','11:00','15:30'],'섬사랑2호');
+  add('완도-덕우(오후)2','완도',['07:20','14:30'],'섬사랑5호');
+  add('화흥포-소안','화흥포',['06:40','07:50','08:50','09:50','10:50','11:50','12:50','13:50','14:50','15:50','17:10','21:00'],'대한');
+  add('화흥포-소안','소안',['06:45','08:05','09:05','10:05','11:05','12:05','13:05','14:05','15:05','16:05','17:05','19:45'],'민국');
+  add('땅끝산양','산양',['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','16:50','17:40'],'드림장보고');
+  add('땅끝산양','땅끝',['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','16:50','17:40'],'드림장보고');
+  add('이목-당사','이목',['07:30','15:40'],'섬사랑1호');add('이목-당사','당사',['08:20','16:20'],'섬사랑1호');
+  add('당목-일정','당목',['06:30','07:30','08:30','09:30','10:30','11:30','13:00','14:00','15:00','16:00','17:00','18:00'],'완농페리3호');
+  add('당목-일정','일정',['06:50','07:50','08:50','09:50','10:50','11:50','13:20','14:20','15:20','16:20','17:20','18:20'],'완농페리3호');
+  add('당목-서성','당목',['07:00','09:00','11:00','13:30','15:30','17:30'],'완농페리5호');
+  add('당목-서성','서성',['07:40','09:40','11:40','14:10','16:10','18:10'],'완농페리5호');
+  add('노력-가학','노력',['07:20','09:20','11:20','13:20','15:20','17:20'],'완농페리2호');
+  add('노력-가학','가학',['07:50','09:50','11:50','13:50','15:50','17:50'],'완농페리2호');
+  items.sort((a,b)=>a.t.localeCompare(b.t));
+  return{ok:true,sample:true,date:ymd8(kst()),fetched:new Date().toISOString(),items};
+}
+function sampleTomorrow(){
+  const k=new Date(Date.now()+9*3600e3+864e5),d=k.toISOString().slice(0,10);
+  const r=(mh,gi,ts,st,rs)=>ts.map(t=>({mh,gi,t,st:st||'운항',rs:rs||''}));
+  return{ok:true,sample:true,date:d,rows:[...r('완도-청산','완도',['0700','1300','1700']),...r('여서-완도','여서',['0715'],'통제','풍랑주의보'),...r('완도-모도','완도',['0710','1100','1530']),
+    ...r('화흥포-소안','동천',['0820','1320','2000']),...r('땅끝-산양','산양',['0700','1300']),...r('땅끝-산양','산양',['1800'],'통제','풍랑주의보'),...r('당목-일정','당목',['0630','1300','1800']),...r('당목-서성','당목',['0700','1330'])]};
+}
+function sampleWeather(){
+  const hours=[],k=new Date(Date.now()+9*3600e3);k.setUTCMinutes(0,0,0);
+  for(let i=0;i<60;i++){const t=new Date(k.getTime()+i*3600e3),h=t.getUTCHours();
+    hours.push({d:t.toISOString().slice(0,10).replace(/-/g,''),t:pad(h)+'00',tmp:Math.round(8+4*Math.sin((h-9)/24*2*Math.PI)),sky:i%17<6?4:1,pty:0,pop:i%17<6?30:0,wsd:+(3+3*Math.abs(Math.sin(i/7))).toFixed(1),vec:300,wav:0.5,pcp:'강수없음',reh:70});}
+  return{ok:true,sample:true,base:ymd8(kst())+'0500',hours};
+}
+
+// ───────── 앱 설치 · 친구에게 보내기 ─────────
+let installEvt=null,toastT=null;
+function toast(msg){const t=document.getElementById('toast');t.innerHTML=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},5000)}
+const standalone=()=>window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(standalone()){document.getElementById('btn-install').hidden=true;document.querySelector('.actions').style.gridTemplateColumns='1fr';document.querySelector('.actions-ttl').textContent='이웃에게도 알려 주세요';}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e});
+window.addEventListener('appinstalled',()=>{document.getElementById('btn-install').hidden=true;toast('홈 화면에 설치했습니다.')});
+document.getElementById('btn-install').addEventListener('click',async()=>{
+  if(/SamsungBrowser/i.test(navigator.userAgent)){
+    toast('삼성 인터넷에서는 설치가 막힐 수 있어 <b>크롬</b>으로 엽니다. 크롬에서 앱 설치를 다시 눌러 주세요.');
+    setTimeout(()=>{location.href='intent://'+SITE.replace('https://','')+'/?install=1#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent('https://play.google.com/store/apps/details?id=com.android.chrome')+';end'},1200);
+    return;
+  }
+  if(!installEvt){toast('설치 준비 중…');for(let i=0;i<15&&!installEvt;i++)await new Promise(r=>setTimeout(r,200))}
+  if(installEvt){document.getElementById('toast').hidden=true;installEvt.prompt();try{const c=await installEvt.userChoice;if(c&&c.outcome==='accepted')document.getElementById('btn-install').hidden=true}catch(e){}installEvt=null;return}
+  const ua=navigator.userAgent,isAndroid=/android/i.test(ua);
+  if(/KAKAOTALK/i.test(ua)){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(SITE+'/?install=1');return}
+  if(isAndroid&&/NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua)){location.href='intent://'+SITE.replace('https://','')+'/?install=1#Intent;scheme=https;package=com.android.chrome;end';return}
+  const ios=/iphone|ipad|ipod/i.test(ua),inapp=/KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+  toast(ios?'아래쪽 <b>공유</b> 버튼 → <b>홈 화면에 추가</b>를 누르세요.':inapp?'카카오톡 등 앱 안에서 열린 화면입니다. 오른쪽 위 메뉴에서 <b>다른 브라우저로 열기</b>(크롬)를 누른 뒤 다시 설치해 주세요.':'오른쪽 위 <b>⋮</b> 메뉴 → <b>앱 설치</b>(또는 홈 화면에 추가)를 누르세요.');
+});
+document.getElementById('btn-share').addEventListener('click',async()=>{
+  const R=cur(),url=SITE+(R?'/'+R.id+'/':'/');
+  const data={title:'완도뱃길 – '+(R?R.name+' ':'')+'배·물때·날씨',text:(R?R.name+' ':'완도 섬 ')+'배 시간·결항·내일 운항예보·날씨·물때를 한 화면에서 봐요.',url};
+  if(navigator.share){try{await navigator.share(data);return}catch(e){if(e&&e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(data.text+' '+url);toast('주소를 복사했습니다. 카카오톡이나 문자에 붙여넣어 보내세요.')}
+  catch(e){toast('이 주소를 친구에게 보내 주세요: <b>'+url.replace('https://','')+'</b>')}
+});
+
+// ───────── 머리띠·시작 ─────────
+function renderToday(){
+  const k=kst(),lu=lunar(ymd(k));
+  document.getElementById('today').innerHTML='<span>'+k.m+'월 '+k.d+'일 '+'일월화수목금토'[k.w]+'요일 '+pad(Math.floor(k.min/60))+':'+pad(k.min%60)+'</span>'+
+    (lu?'<span class="pill">음 '+lu.m+'.'+lu.d+'</span><span class="pill strong">'+mulName(lu.d)+'</span>':'');
+}
+function setBig(on){document.documentElement.classList.toggle('big',on);document.getElementById('btn-big').setAttribute('aria-pressed',on);LS.set('wando-big',on?'1':'0')}
+if(LS.get('wando-big')==='1')setBig(true);
+document.getElementById('btn-big').addEventListener('click',()=>setBig(!document.documentElement.classList.contains('big')));
+document.getElementById('btn-region').addEventListener('click',openPicker);
+document.getElementById('btn-out').addEventListener('click',()=>setDir('out'));
+document.getElementById('btn-in').addEventListener('click',()=>setDir('in'));
+document.getElementById('prev').addEventListener('click',()=>{if(viewDay>T0){viewDay=fromDayNum(dayNum(viewDay)-1);renderTide()}});
+document.getElementById('nextd').addEventListener('click',()=>{if(viewDay<T1){viewDay=fromDayNum(dayNum(viewDay)+1);renderTide()}});
+if(/[?&]install=1/.test(location.search)&&!standalone()){
+  const b=document.getElementById('btn-install');b.style.boxShadow='0 0 0 4px #ffc93d';setTimeout(()=>{try{b.scrollIntoView({block:'center'})}catch(e){}},300);
+  setTimeout(()=>toast('크롬으로 열렸습니다. <b>앱 설치</b> 버튼을 눌러 주세요.'),600);
+}
+buildFromFallback();renderToday();
+(()=>{
+  // 지역 주소(/cheongsan/ 등)로 들어오면 그 지역으로 바로 엶. 예전 방식 ?r= 도 받음
+  const q=(location.pathname.match(/^\/([a-z]+)\/?$/)||[])[1]||(location.search.match(/[?&]r=([a-z]+)/)||[])[1];
+  const id=REGIONS.some(r=>r.id===q)?q:LS.get('wando-region');
+  if(/[?&](r|install)=/.test(location.search)){try{history.replaceState(null,'',location.pathname)}catch(e){}}
+  if(REGIONS.some(r=>r.id===id))setRegion(id);else openPicker();
+})();
+loadKomsa();loadTomorrow();loadWarn();
+setInterval(()=>{renderAll();renderTide()},30000);
+setInterval(loadKomsa,5*60000);setInterval(loadTomorrow,30*60000);setInterval(loadWarn,10*60000);setInterval(()=>{if(RID)loadWeather()},30*60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadKomsa()});
+</script>
+</body>
+</html>
