@@ -4,12 +4,14 @@
 // - /api/tomorrow       : KOMSA 내일 운항예보(상세, 완도군 관련 행만) — 30분 캐시
 // - /api/weather/:지역  : 기상청 단기예보(지역 격자) — 1시간 캐시
 // - /api/tide/:지역     : 국립해양조사원 TideBED(지역 좌표, 14일) → 안 되면 완도 조석예보 — 6시간 캐시
+// - /api/band           : 선사·항구 밴드 최근 글(BAND_TOKEN 이 있을 때만) — 낮 10분 · 밤 1시간 캐시
 // - /api/warn           : 기상청 기상특보 통보문(광주청 156 + 제주청 184) — 10분 캐시. 구역 고르기는 화면에서
 // 인증키: Netlify 환경변수 DATA_GO_KR_KEY (공공데이터포털 일반 인증키, Decoding). 코드·대화에 넣지 않음.
 // KOMSA_HUB_URL 을 넣으면 KOMSA를 직접 부르지 않고 그 주소(다른 허브)의 /api/komsa 자료를 받아 씀.
 
 import "../../public/regions.js";
 const REGIONS = globalThis.WANDO_REGIONS;
+const BANDS = globalThis.WANDO_BANDS;
 
 const FERRY_URL = "https://apis.data.go.kr/B554035/oprt-schd-info-v2/get-oprt-schd-info-v2";
 const TIDE_URL = "https://apis.data.go.kr/1192136/tideFcstTime/GetTideFcstTimeApiService";
@@ -247,15 +249,46 @@ async function warn(key) {
   return { ok: true, at: gj ? String(gj.tmFc) : "", atJeju: jjAt, fetched: new Date().toISOString(), active, pre };
 }
 
+// ───── 밴드 최근 글 (BAND Open API) ─────
+// 환경변수 BAND_TOKEN: 밴드 개발자센터에서 받은 access token. 토큰 주인 계정이 가입한 밴드만 읽을 수 있음.
+// regions.js 의 BAND 목록(re)과 이름이 맞는 밴드만 고름. 글은 글자만(사진 제외), 3일 안 글만.
+const BAND_API = "https://openapi.band.us";
+let bandKeys = null, bandKeysAt = 0;
+export function cleanBandText(s) {
+  return String(s || "").replace(/<band:[^>]*>([^<]*)<\/band:[^>]*>/g, "$1").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 400);
+}
+async function band() {
+  const token = process.env.BAND_TOKEN;
+  if (!token) return { ok: false, off: true, error: "BAND_TOKEN 환경변수가 없습니다" };
+  if (!bandKeys || Date.now() - bandKeysAt > 6 * 3600e3) {
+    const j = await getJson(`${BAND_API}/v2.1/bands`, { access_token: token });
+    if (j.result_code !== 1) throw new Error(`밴드 목록 오류 ${j.result_code} ${j.result_data?.message || ""}`);
+    const list = j.result_data?.bands || [];
+    bandKeys = BANDS.map((b) => { const f = list.find((x) => b.re.test(x.name || "")); return f ? { name: b.name, key: f.band_key } : null; }).filter(Boolean);
+    bandKeysAt = Date.now();
+  }
+  const now = Date.now();
+  const res = await Promise.all(bandKeys.map(async (b) => {
+    try {
+      const j = await getJson(`${BAND_API}/v2/band/posts`, { access_token: token, band_key: b.key, locale: "ko_KR" });
+      if (j.result_code !== 1) return [];
+      return (j.result_data?.items || []).slice(0, 6).map((p) => ({ band: b.name, at: +p.created_at, text: cleanBandText(p.content) }));
+    } catch { return []; }
+  }));
+  const items = res.flat().filter((x) => x.text && now - x.at < 3 * 864e5).sort((a, b) => b.at - a.at);
+  return { ok: true, fetched: new Date().toISOString(), bands: bandKeys.map((b) => b.name), items };
+}
+
 export default async (req) => {
   const key = process.env.DATA_GO_KR_KEY;
   const parts = new URL(req.url).pathname.split("/").filter(Boolean); // ["api", which, region?]
   const which = parts[1], region = REGIONS.find((r) => r.id === parts[2]);
-  if (!key && !(which === "komsa" && process.env.KOMSA_HUB_URL)) return json({ ok: false, error: "DATA_GO_KR_KEY 환경변수가 없습니다" }, 60);
+  if (!key && which !== "band" && !(which === "komsa" && process.env.KOMSA_HUB_URL)) return json({ ok: false, error: "DATA_GO_KR_KEY 환경변수가 없습니다" }, 60);
   try {
     if (which === "komsa") return json(await komsa(key), komsaCacheSeconds());
     if (which === "tomorrow") return json(await tomorrow(key), 1800);
     if (which === "warn") return json(await warn(key), 600);
+    if (which === "band") return json(await band(), komsaCacheSeconds() === 900 ? 600 : 3600);
     if (which === "weather" || which === "tide") {
       if (!region) return json({ ok: false, error: "알 수 없는 지역" }, 3600);
       return which === "weather" ? json(await weather(key, region), 3600) : json(await tide(key, region), 21600);
@@ -263,8 +296,8 @@ export default async (req) => {
     return json({ ok: false, error: "알 수 없는 경로" }, 60);
   } catch (e) {
     // 오류도 5분 캐시: 방문자마다 API를 다시 불러 하루 한도를 다 쓰는 일을 막음
-    return json({ ok: false, error: String(e.message || e).replace(/serviceKey=[^&\s"]+/g, "serviceKey=***") }, 300);
+    return json({ ok: false, error: String(e.message || e).replace(/(serviceKey|access_token)=[^&\s"]+/g, "$1=***") }, 300);
   }
 };
 
-export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/weather/:region", "/api/tide/:region"] };
+export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/band", "/api/weather/:region", "/api/tide/:region"] };

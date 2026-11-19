@@ -127,6 +127,8 @@ svg{width:100%;height:auto;display:block}
 .bandbar .ttl{font-size:14px;font-weight:700}
 .bandbar .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .bandbar a{display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:10px;padding:9px 4px;background:#e9f6ee;color:#145c33;text-decoration:none;font-weight:700;font-size:14px;text-align:center;word-break:keep-all}
+.bandbar .nolink{display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:10px;padding:9px 4px;background:var(--foam);border:1px dashed var(--line);color:var(--ink);font-weight:700;font-size:14px;text-align:center;word-break:keep-all}
+.bandbar .nolink small{font-weight:500;font-size:11px;color:var(--mute)}
 .bandbar a small{font-weight:500;font-size:11px;color:#3d6b50}
 .extra{font-size:13px;color:var(--sea);background:rgba(13,79,92,.07);border-radius:8px;padding:6px 10px}
 .hdr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -261,6 +263,11 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
     <div id="routes" style="display:flex;flex-direction:column;gap:14px"></div>
     <div class="liveinfo" id="liveinfo"></div>
 
+    <section class="card" id="notices" hidden>
+      <h2><span>선사 공지 <span id="ntcbadge"></span></span><small>밴드 최근 글 · 3일 안</small></h2>
+      <div id="ntcbody" style="display:flex;flex-direction:column;gap:10px"></div>
+    </section>
+
     <nav class="bandbar" aria-label="선사 밴드" id="bandbar" hidden>
       <div class="ttl">결항·변경 공지는 선사 밴드에서 확인하세요</div>
       <div class="row" id="bandrow"></div>
@@ -366,7 +373,7 @@ function setRegion(id,fromUser){
   document.getElementById('picker').hidden=true;document.getElementById('main').hidden=false;document.getElementById('btn-region').hidden=false;
   document.getElementById('rname').textContent=R.name;document.getElementById('rtitle').textContent=R.title;
   document.title='완도뱃길 – '+R.name+' 배·물때·날씨';
-  WX=null;renderStatic();renderAll();renderTomorrow();renderWeather();renderWarn();
+  WX=null;renderStatic();renderAll();renderTomorrow();renderWeather();renderWarn();renderNotices();
   resetTide();loadWeather();loadTide();
   if(fromUser)window.scrollTo(0,0);
 }
@@ -518,13 +525,39 @@ function setDir(x){dir=x;saveSel();renderRoutes()}
 function renderStatic(){
   const R=cur();
   const bands=R.bands||[];document.getElementById('bandbar').hidden=!bands.length;
-  const row=document.getElementById('bandrow');row.style.gridTemplateColumns='repeat('+Math.max(1,bands.length)+',1fr)';
-  row.innerHTML=bands.map(b=>'<a href="'+b[1]+'">'+esc(b[0])+'<small>'+esc(b[2])+'</small></a>').join('');
-  document.getElementById('links').innerHTML=[...bands.map(b=>[b[0]+' 밴드',b[1]]),...R.links].map(l=>'<a href="'+esc(l[1])+'">'+esc(l[0])+'</a>').join('');
+  const row=document.getElementById('bandrow');row.style.gridTemplateColumns='repeat('+Math.min(3,Math.max(1,bands.length))+',1fr)';
+  row.innerHTML=bands.map(b=>b.url?'<a href="'+esc(b.url)+'">'+esc(b.name)+'<small>'+esc(b.sub)+'</small></a>':'<div class="nolink">'+esc(b.name)+'<small>밴드 앱에서 검색</small></div>').join('');
+  document.getElementById('links').innerHTML=[...bands.filter(b=>b.url).map(b=>[b.name+' 밴드',b.url]),...R.links].map(l=>'<a href="'+esc(l[1])+'">'+esc(l[0])+'</a>').join('');
   const tels=R.tels||[];
   document.getElementById('tels').innerHTML=tels.length?tels.map(t=>'<a href="tel:'+t[1].replace(/-/g,'')+'"><span>'+esc(t[0])+'</span><b>'+t[1]+'</b></a>').join(''):'<div class="sub" style="border:0">이 지역 선사·매표소 전화번호는 확인되는 대로 넣겠습니다.</div>';
   document.getElementById('srcnote').textContent=R.source||'';
   document.getElementById('wxname').textContent=R.wx.label+' 날씨';
+}
+
+// ───────── 선사 공지 (밴드 최근 글, 서버에 BAND_TOKEN 이 있을 때만) ─────────
+let NTC=null;
+const NTC_SAMPLE={ok:true,sample:true,items:[
+ {band:'노화농협',at:Date.now()-2*3600e3,text:'(예시) 해상의 기상악화로 산양-땅끝 16:30 운항 이후 결항합니다'},
+ {band:'청산도 선박운항시간표',at:Date.now()-5*3600e3,text:'(예시) 내일 청산 출발 첫배는 정상 운항 예정입니다'},
+ {band:'약산 당목항',at:Date.now()-26*3600e3,text:'(예시) 당목-일정 항로 정상 운항합니다'}]};
+async function loadNotices(){const j=await api('/api/band');NTC=!j?NTC_SAMPLE:j;renderNotices()}
+function agoTxt(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return'방금';if(m<60)return m+'분 전';const h=Math.floor(m/60);if(h<24)return h+'시간 전';const d=new Date(ms+9*3600e3);return(d.getUTCMonth()+1)+'/'+d.getUTCDate()}
+const isStopText=t=>/결항|통제|운항\s*중단|중지/.test(t)&&!/정상\s*운항/.test(t);
+function renderNotices(){
+  const R=cur(),card=document.getElementById('notices'),body=document.getElementById('ntcbody');
+  if(!R||!NTC||NTC.off||(!NTC.ok&&!NTC.items)){card.hidden=true;return}
+  const names=(R.bands||[]).map(b=>b.name);
+  if(!names.length){card.hidden=true;return}
+  card.hidden=false;
+  document.getElementById('ntcbadge').innerHTML=NTC.sample?'<span class="badge-ex">예시</span>':'';
+  if(!NTC.ok){body.innerHTML='<div class="sub">밴드 글을 받지 못했습니다. 아래 밴드에서 직접 확인하세요.</div>';return}
+  const items=(NTC.items||[]).filter(x=>names.includes(x.band)&&Date.now()-x.at<3*864e5).sort((a,b)=>b.at-a.at).slice(0,4);
+  if(!items.length){body.innerHTML='<div class="sub">최근 3일 동안 올라온 공지가 없습니다.</div>';return}
+  body.innerHTML=items.map(x=>{
+    const b=(R.bands||[]).find(y=>y.name===x.band)||{},today=Date.now()-x.at<12*3600e3;
+    return'<div class="notice'+(isStopText(x.text)&&today?' stop':'')+'"><div class="who"><b>'+esc(x.band)+'</b><span class="ago">'+agoTxt(x.at)+'</span>'+(today?'<span class="new">오늘</span>':'')+'</div>'+
+      '<p>'+esc(x.text)+'</p>'+(b.url?'<a class="more" href="'+esc(b.url)+'">밴드에서 보기</a>':'')+'</div>';
+  }).join('');
 }
 
 // ───────── 내일 운항예보 ─────────
@@ -832,9 +865,9 @@ buildFromFallback();renderToday();
   if(/[?&](r|install)=/.test(location.search)){try{history.replaceState(null,'',location.pathname)}catch(e){}}
   if(REGIONS.some(r=>r.id===id))setRegion(id);else openPicker();
 })();
-loadKomsa();loadTomorrow();loadWarn();
+loadKomsa();loadTomorrow();loadWarn();loadNotices();
 setInterval(()=>{renderAll();renderTide()},30000);
-setInterval(loadKomsa,5*60000);setInterval(loadTomorrow,30*60000);setInterval(loadWarn,10*60000);setInterval(()=>{if(RID)loadWeather()},30*60000);
+setInterval(loadKomsa,5*60000);setInterval(loadTomorrow,30*60000);setInterval(loadWarn,10*60000);setInterval(loadNotices,10*60000);setInterval(()=>{if(RID)loadWeather()},30*60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadKomsa()});
 </script>
 </body>

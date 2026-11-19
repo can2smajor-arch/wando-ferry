@@ -61,10 +61,13 @@
     ['오늘 운항정보 (해양교통안전공단)', 'https://www.komsa.or.kr/prog/pssgCurState/kor/sub03_0202/list.do'],
     ['여객선 예매 (가보고싶은섬)', 'https://island.haewoon.co.kr/'],
   ];
+  // 선사·항구 밴드: name 화면 이름, url 밴드 주소(모르면 null → 밴드 앱에서 검색 안내), sub 노선, re 밴드 API 목록에서 찾을 이름
   const BAND = {
-    soan: ['소안농협', 'https://band.us/band/70603408', '동천·화흥포'],
-    nohwa: ['노화농협', 'https://band.us/band/77170845', '산양·땅끝·넙도'],
-    haekwang: ['해광운수', 'https://band.us/band/99139814', '산양·땅끝'],
+    soan: { name: '소안농협', url: 'https://band.us/band/70603408', sub: '동천·화흥포', re: /소안농협/ },
+    nohwa: { name: '노화농협', url: 'https://band.us/band/77170845', sub: '산양·땅끝·넙도', re: /노화농협/ },
+    haekwang: { name: '해광운수', url: 'https://band.us/band/99139814', sub: '땅끝·섬사랑호', re: /해광운수/ },
+    dangmok: { name: '약산 당목항', url: null, sub: '금일·생일', re: /당목/ },
+    cheongsan: { name: '청산도 선박운항시간표', url: null, sub: '청산·완도', re: /청산도\s*선박/ },
   };
   const TEL_HH = [['동천 매표소', '061-553-5635'], ['화흥포 매표소', '061-555-1010'], ['소안농협 (선사)', '061-553-8188']];
   const TEL_TK = [['산양 매표소', '061-553-6107'], ['땅끝 매표소', '061-535-4268'], ['해광운수 땅끝 매표소', '061-535-5786'], ['노화농협 (선사)', '061-553-5688']];
@@ -83,7 +86,7 @@
         { id: 'jj', label: '제주·추자', optional: true, lines: [L(RE.jeju, '완도항 → 제주·추자', '제주·추자 → 완도항', '대형 여객선')], tmr: byRe(/제주|추자/) },
         { id: 'hh', label: '화흥포→소안·노화', lines: [L(RE.hwaheung, '화흥포 → 동천(노화)·소안', '소안·동천 → 화흥포', '소안농협 · 약 35~55분', { note: '소안항에서 출발한 배가 노화 동천항을 거쳐 화흥포로 옵니다. 동천 시각은 노화·보길 지역에서 보세요.' })], tmr: byRe(/화흥포|소안/) },
       ],
-      bands: [BAND.soan],
+      bands: [BAND.cheongsan, BAND.soan, BAND.haekwang],
       tels: TEL_HH.slice(1),
       links: [['군청 시간표: 화흥포', 'https://www.wando.go.kr/wando/sub.cs?m=350']],
     },
@@ -147,7 +150,7 @@
         { id: 'ds', label: '당사도', lines: [L(RE.dangsa, '당사도 → 소안 → 이목(노화)', '이목(노화) → 소안 → 당사도', '섬사랑1호(해광운수)', { note: '공단 자료에는 이목·당사 출발 시각만 나옵니다. 소안에 들르는 시각은 선사에 확인하세요.' })], tmr: byRe(/당사/) },
         { id: 'sl', label: '횡간·섬순회', lines: [L(RE.namseong, '횡간·섬순회 쪽에서 출발', '이목·산양·땅끝에서 출발', '섬사랑1호·노화카훼리7호', { note: '섬순회 배는 이목 → 소안 → 동천 → 횡간 → 마삭 → 산양 → 백일 → 동화 → 남성 순서로 들릅니다.' })], tmr: (r) => /^이목-남성/.test(r.mh || '') || (r.mh === '땅끝-산양' && /횡간/.test(r.gi || '')) },
       ],
-      bands: [BAND.soan],
+      bands: [BAND.soan, BAND.haekwang],
       tels: TEL_HH,
       links: [['군청 시간표: 화흥포', 'https://www.wando.go.kr/wando/sub.cs?m=350']],
     },
@@ -161,7 +164,7 @@
         { id: 'ys', label: '여서·장도', lines: [L(RE.yeoseo, '여서도 → 청산 → 장도 → 완도항', '완도항 → 장도 → 청산 → 여서도', '섬사랑7호(해광운수) · 하루 1왕복', { note: '청산도·장도에 들르는 시각은 선사에 확인하세요.' })], tmr: byRe(/여서/) },
         { id: 'md', label: '모도', lines: [L(RE.modo, '모도에서 출발', '완도항 → 모도', '섬사랑2호(해광운수) · 순환', { note: '순환 항로라 공단 자료에는 완도 출발 시각만 나옵니다. 모도에서 나가는 시각은 완도 출발 뒤 약 1시간입니다(선사 확인).', fallback: { in: ['07:10?', '11:00?', '15:30?'] } })], tmr: byRe(/모도/) },
       ],
-      bands: [], tels: [], links: [],
+      bands: [BAND.cheongsan, BAND.haekwang], tels: [], links: [],
     },
     {
       id: 'geumil', name: '금일', title: '금일도 (일정·동송)', desc: '일정↔당목(약산), 동송↔녹동·우두(고흥)',
@@ -172,7 +175,7 @@
         { id: 'dm', label: '당목(약산)', lines: [L(RE.iljeong, '일정항 → 당목항', '당목항 → 일정항', '완도농협·풍진해운 · 약 15분')], tmr: byRe(/일정/) },
         { id: 'ds', label: '동송↔고흥', optional: true, lines: [L(RE.dongsong, '동송항 → 녹동·우두', '녹동·우두 → 동송항', '평화페리 · 고흥')], tmr: byRe(/동송/) },
       ],
-      bands: [], tels: [], links: [],
+      bands: [BAND.dangmok], tels: [], links: [],
     },
     {
       id: 'saengil', name: '생일', title: '생일도 (서성·용출)', desc: '서성↔당목(약산), 덕우 항로(용출)',
@@ -183,7 +186,7 @@
         { id: 'dm', label: '당목(약산)', lines: [L(RE.seoseong, '서성항 → 당목항', '당목항 → 서성항', '완도농협 · 약 20분')], tmr: byRe(/서성/) },
         { id: 'dw', label: '완도(덕우 배)', lines: [L(RE.deogu, '덕우 항로 (생일 들름)', '완도항 출발', '섬사랑5호(해광운수) · 순환', { note: '완도↔덕우 배가 생일(용출)에 들릅니다. 생일 도착·출발 시각은 선사에 확인하세요.' })], tmr: byRe(/덕우/) },
       ],
-      bands: [], tels: [], links: [],
+      bands: [BAND.dangmok, BAND.haekwang], tels: [], links: [],
     },
     {
       id: 'geumdang', name: '금당', title: '금당도 (가학)', desc: '가학↔노력, 고흥 쪽 배',
@@ -204,10 +207,11 @@
       groups: [
         { id: 'dw', label: '완도', lines: [L(RE.deogu, '덕우·황제에서 출발', '완도항 → 덕우·황제', '섬사랑5호(해광운수) · 순환', { note: '완도 → 모황 → 덕우 → 황제 → 덕우 → 생일 → 모황 → 완도 순서로 도는 배입니다(해광운수 시간표). 공단 자료에는 완도 출발 시각만 나오니, 섬에 들르는 시각은 선사에 확인하세요.' })], tmr: byRe(/덕우/) },
       ],
-      bands: [], tels: [], links: [],
+      bands: [BAND.haekwang], tels: [], links: [],
     },
   ];
 
   R.forEach((r) => { r.links = [...(r.links || []), ...LINKS_COMMON]; });
   globalThis.WANDO_REGIONS = R;
+  globalThis.WANDO_BANDS = Object.values(BAND);
 })();

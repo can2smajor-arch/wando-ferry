@@ -13,6 +13,11 @@
 - 앱 안 '친구에게 보내기'도 지금 보고 있는 지역 주소를 보냅니다.
 - `public/index.html`이나 `regions.js`를 고친 뒤에는 반드시 다시 만듭니다: `node tools/build-pages.mjs && python3 tools/make_icons.py`
 
+## 선사 공지 (밴드)
+- Netlify 환경변수 `BAND_TOKEN`(밴드 개발자센터 access token)을 넣으면 `/api/band`가 밴드 최근 글(3일 안, 글자만)을 모아 지역 화면에 보여 줍니다. 없으면 공지 칸은 숨겨집니다.
+- 토큰 주인 계정이 가입한 밴드만 읽습니다. 지금 설정된 밴드: 소안농협, 노화농협, (주)해광운수, 약산 당목항, 청산도 선박운항시간표 (`regions.js`의 `BAND`).
+- 약산 당목항·청산도 밴드는 주소(`url`)를 아직 모릅니다. 밴드 앱 → 공유 → 링크 복사로 받아 넣으면 '밴드에서 보기' 연결이 생깁니다.
+
 ## 서버 경로
 | 경로 | 내용 | 캐시 |
 |---|---|---|
@@ -20,6 +25,7 @@
 | `/api/tomorrow` | KOMSA 내일 운항예보(완도군 관련 행) | 30분 |
 | `/api/weather/지역` | 기상청 단기예보 | 1시간 |
 | `/api/tide/지역` | TideBED 14일(안 되면 완도 조석예보) | 6시간 |
+| `/api/band` | 선사·항구 밴드 최근 글 (BAND_TOKEN 있을 때) | 낮 10분 · 밤 1시간 |
 | `/api/warn` | 기상특보 통보문(광주청 156 + 제주청 184) | 10분 |
 
 지역: `wando` `nohwa` `soan` `cheongsan` `geumil` `saengil` `geumdang` `deogu`
