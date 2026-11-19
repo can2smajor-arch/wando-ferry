@@ -537,6 +537,7 @@ function renderStatic(){
 // ───────── 선사 공지 (밴드 최근 글, 서버에 BAND_TOKEN 이 있을 때만) ─────────
 let NTC=null;
 const NTC_SAMPLE={ok:true,sample:true,items:[
+ {band:'완도운항관리센터',at:Date.now()-1*3600e3,text:'(예시) [완도 여객선 운항정보] 07:10 기준 ◇ 운항통제(기상악화) > 이목-서넙 · 여서-완도'},
  {band:'노화농협',at:Date.now()-2*3600e3,text:'(예시) 해상의 기상악화로 산양-땅끝 16:30 운항 이후 결항합니다'},
  {band:'청산도 선박운항시간표',at:Date.now()-5*3600e3,text:'(예시) 내일 청산 출발 첫배는 정상 운항 예정입니다'},
  {band:'약산 당목항',at:Date.now()-26*3600e3,text:'(예시) 당목-일정 항로 정상 운항합니다'}]};
@@ -551,7 +552,9 @@ function renderNotices(){
   card.hidden=false;
   document.getElementById('ntcbadge').innerHTML=NTC.sample?'<span class="badge-ex">예시</span>':'';
   if(!NTC.ok){body.innerHTML='<div class="sub">밴드 글을 받지 못했습니다. 아래 밴드에서 직접 확인하세요.</div>';return}
-  const items=(NTC.items||[]).filter(x=>names.includes(x.band)&&Date.now()-x.at<3*864e5).sort((a,b)=>b.at-a.at).slice(0,4);
+  const bandOf=n=>(R.bands||[]).find(y=>y.name===n)||{};
+  // 공단 밴드처럼 완도 전체 소식을 올리는 밴드는 이 지역 항구 이름이 있는 글만
+  const items=(NTC.items||[]).filter(x=>names.includes(x.band)&&Date.now()-x.at<3*864e5&&(!bandOf(x.band).all||(R.kw&&R.kw.test(x.text))||/전\s*항로|모든\s*항로/.test(x.text))).sort((a,b)=>b.at-a.at).slice(0,4);
   if(!items.length){body.innerHTML='<div class="sub">최근 3일 동안 올라온 공지가 없습니다.</div>';return}
   body.innerHTML=items.map(x=>{
     const b=(R.bands||[]).find(y=>y.name===x.band)||{},today=Date.now()-x.at<12*3600e3;

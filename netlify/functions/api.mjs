@@ -264,7 +264,7 @@ async function band() {
     const j = await getJson(`${BAND_API}/v2.1/bands`, { access_token: token });
     if (j.result_code !== 1) throw new Error(`밴드 목록 오류 ${j.result_code} ${j.result_data?.message || ""}`);
     const list = j.result_data?.bands || [];
-    bandKeys = BANDS.map((b) => { const f = list.find((x) => b.re.test(x.name || "")); return f ? { name: b.name, key: f.band_key } : null; }).filter(Boolean);
+    bandKeys = BANDS.map((b) => { const f = list.find((x) => b.re.test(x.name || "")); return f ? { name: b.name, key: f.band_key, all: !!b.all } : null; }).filter(Boolean);
     bandKeysAt = Date.now();
   }
   const now = Date.now();
@@ -272,7 +272,7 @@ async function band() {
     try {
       const j = await getJson(`${BAND_API}/v2/band/posts`, { access_token: token, band_key: b.key, locale: "ko_KR" });
       if (j.result_code !== 1) return [];
-      return (j.result_data?.items || []).slice(0, 6).map((p) => ({ band: b.name, at: +p.created_at, text: cleanBandText(p.content) }));
+      return (j.result_data?.items || []).slice(0, b.all ? 12 : 6).map((p) => ({ band: b.name, at: +p.created_at, text: cleanBandText(p.content) }));
     } catch { return []; }
   }));
   const items = res.flat().filter((x) => x.text && now - x.at < 3 * 864e5).sort((a, b) => b.at - a.at);
