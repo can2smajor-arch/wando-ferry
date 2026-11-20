@@ -192,8 +192,9 @@ async function tideDay(key, date) {
 }
 async function tide(key, region) {
   const dates = Array.from({ length: TIDE_DAYS }, (_, i) => kstDate(i));
+  let bedError = "";
   try {
-    const res = await Promise.all(dates.map((d) => bedDay(key, d, region.tide).catch(() => null)));
+    const res = await Promise.all(dates.map((d) => bedDay(key, d, region.tide).catch((e) => { bedError = bedError || String(e.message || e).slice(0, 200); return null; })));
     const days = {}; let info = null;
     for (const r of res) {
       if (!r) continue; info = info || r.info;
@@ -203,12 +204,13 @@ async function tide(key, region) {
     if (Object.keys(days).length >= 3) {
       return { ok: true, region: region.id, kind: "bed", station: region.tide.label, base: info?.base || "", josi: info?.josi || "", jogo: info?.jogo || "", fetched: new Date().toISOString(), days };
     }
-  } catch (e) { /* 아래 완도 예보로 */ }
+  } catch (e) { bedError = bedError || String(e.message || e).slice(0, 200); }
   const series = await Promise.all(dates.map((d) => tideDay(key, d).catch(() => [])));
   const days = {};
   dates.forEach((d, i) => { if (series[i].length) days[`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`] = series[i]; });
   if (!Object.keys(days).length) throw new Error("조석 자료를 받지 못했습니다");
-  return { ok: true, region: region.id, kind: "station", station: "완도", fetched: new Date().toISOString(), days };
+  // TideBED가 왜 안 됐는지 함께 남김 (원인 확인용)
+  return { ok: true, region: region.id, kind: "station", station: "완도", bedError: bedError.replace(/serviceKey=[^&\s"]+/g, "serviceKey=***"), fetched: new Date().toISOString(), days };
 }
 
 // ───── 기상특보: 통보문의 발효현황(t6)·예비특보(t7)를 줄 단위로 넘김 (구역 고르기는 화면에서) ─────
