@@ -41,3 +41,5 @@ const { cleanKey } = await import("../netlify/functions/api.mjs");
 console.log("cleanKey", cleanKey(' "abc%2Bdef%3D%3D" '), cleanKey("abc+def=="));
 globalThis.fetch = async () => new Response(JSON.stringify({ resultCode: "30", resultMsg: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" }));
 console.log("형식 오류 →", (await get("/api/weather/soan")).j.error);
+const H = "0123456789abcdef".repeat(4);
+console.log("64자+보이지 않는 글자 →", cleanKey(H.slice(0, 30) + "​" + H.slice(30)) === H, " 끝에 점 →", cleanKey(H + ".") === H, " 정상 →", cleanKey(H) === H, " 옛 키 →", cleanKey("abc+def/ghi=="));

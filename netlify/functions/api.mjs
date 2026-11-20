@@ -292,6 +292,9 @@ async function band() {
 export function cleanKey(k) {
   k = String(k || "").trim().replace(/^["']|["']$/g, "");
   if (/%[0-9A-Fa-f]{2}/.test(k)) { try { k = decodeURIComponent(k); } catch { /* 그대로 */ } }
+  // 요즘 키는 0~9·a~f 64자. 붙여 넣다 섞인 보이지 않는 글자·기호를 빼면 64자가 되는 경우 그걸 씀
+  const hex = k.replace(/[^0-9A-Fa-f]/g, "");
+  if (k.length !== 64 && hex.length === 64 && k.length - hex.length <= 3) return hex;
   return k;
 }
 
@@ -314,7 +317,7 @@ export default async (req) => {
     // 오류도 5분 캐시: 방문자마다 API를 다시 불러 하루 한도를 다 쓰는 일을 막음
     let msg = String(e.message || e).replace(/(serviceKey|access_token)=[^&\s"]+/g, "$1=***");
     // 인증키 오류면 키 길이와 끝 4자리만 함께 보여 줌 (Netlify 화면의 값과 맞는지 비교용, 키 전체는 절대 보이지 않음)
-    if (/SERVICE_KEY|인증키/.test(msg)) msg += ` [키 길이 ${key.length}자, 끝 ${key.slice(-4)}, 기호 ${/[^0-9A-Za-z]/.test(key) ? "있음" : "없음"}]`;
+    if (/SERVICE_KEY|인증키/.test(msg)) msg += ` [키 길이 ${key.length}자, 끝 ${key.slice(-4)}, 기호 ${[...new Set(key.match(/[^0-9A-Za-z]/g) || [])].map((c) => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")).join(",") || "없음"}]`;
     return json({ ok: false, error: msg }, 300);
   }
 };
