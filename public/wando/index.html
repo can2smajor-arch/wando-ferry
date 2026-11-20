@@ -472,7 +472,11 @@ function openWindy(o){
   const src='https://embed.windy.com/embed2.html?lat='+la+'&lon='+lo+'&detailLat='+la+'&detailLon='+lo+'&zoom=9&level=surface&overlay='+o+'&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=m%2Fs&metricTemp=%C2%B0C&radarRange=-1';
   box.innerHTML='<iframe src="'+src+'" title="Windy 날씨 지도" loading="lazy"></iframe><div class="sub" style="margin-top:6px">데이터를 많이 씁니다(와이파이 권장). 안 보이면 <a href="https://www.windy.com/?'+o+','+la+','+lo+',9">Windy에서 크게 보기</a></div>';
 }
-document.querySelectorAll('#wmapbtn button').forEach(b=>b.addEventListener('click',()=>openWindy(b.dataset.o)));
+// 같은 버튼을 다시 누르면 지도를 닫음, 다른 버튼을 누르면 그 지도로 바꿈
+document.querySelectorAll('#wmapbtn button').forEach(b=>b.addEventListener('click',()=>{
+  if(b.getAttribute('aria-pressed')==='true'){document.getElementById('wmapbox').innerHTML='';b.setAttribute('aria-pressed','false');return}
+  openWindy(b.dataset.o);
+}));
 function renderPicker(){
   renderMap();
   const box=document.getElementById('regions');
