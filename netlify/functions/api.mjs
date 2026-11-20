@@ -190,11 +190,29 @@ async function tideDay(key, date) {
     return [+hm[0] * 60 + +hm[1], Math.round(x.tdlvHgt * 10) / 10];
   });
 }
+// TideBED는 바다 격자점에서만 값이 나오는 것으로 보임(노화 동천항 34.19/126.59은 됨).
+// 지역 좌표에서 안 나오면 소수 둘째 자리로 맞추고, 주변 0.01~0.02° 바다 쪽 점을 차례로 시험해 되는 점을 씀.
+export function bedCandidates(pos) {
+  const la = +pos.lat, lo = +pos.lot, r = (x) => (Math.round(x * 100) / 100).toFixed(2);
+  const out = [{ lat: String(pos.lat), lot: String(pos.lot) }];
+  const offs = [[0, 0], [0.01, 0], [-0.01, 0], [0, 0.01], [0, -0.01], [0.01, 0.01], [-0.01, -0.01], [0.01, -0.01], [-0.01, 0.01], [0.02, 0], [-0.02, 0], [0, 0.02], [0, -0.02]];
+  for (const [a, b] of offs) { const c = { lat: r(la + a), lot: r(lo + b) }; if (!out.some((o) => o.lat === c.lat && o.lot === c.lot)) out.push(c); }
+  return out;
+}
+const bedPoint = {}; // 지역별로 찾은 점 (함수가 살아 있는 동안 기억)
 async function tide(key, region) {
   const dates = Array.from({ length: TIDE_DAYS }, (_, i) => kstDate(i));
   let bedError = "";
   try {
-    const res = await Promise.all(dates.map((d) => bedDay(key, d, region.tide).catch((e) => { bedError = bedError || String(e.message || e).slice(0, 200); return null; })));
+    let pos = bedPoint[region.id];
+    if (!pos) {
+      for (const c of bedCandidates(region.tide)) {
+        try { await bedDay(key, dates[0], c); pos = c; break; } catch (e) { bedError = bedError || String(e.message || e).slice(0, 200); }
+      }
+      if (pos) bedPoint[region.id] = pos;
+    }
+    if (!pos) throw new Error(bedError || "TideBED 점을 찾지 못함");
+    const res = await Promise.all(dates.map((d) => bedDay(key, d, pos).catch((e) => { bedError = bedError || String(e.message || e).slice(0, 200); return null; })));
     const days = {}; let info = null;
     for (const r of res) {
       if (!r) continue; info = info || r.info;
@@ -202,7 +220,7 @@ async function tide(key, region) {
     }
     for (const d of Object.keys(days)) days[d].sort((a, b) => a[0] - b[0]);
     if (Object.keys(days).length >= 3) {
-      return { ok: true, region: region.id, kind: "bed", station: region.tide.label, base: info?.base || "", josi: info?.josi || "", jogo: info?.jogo || "", fetched: new Date().toISOString(), days };
+      return { ok: true, region: region.id, kind: "bed", station: region.tide.label, point: `${bedPoint[region.id].lat},${bedPoint[region.id].lot}`, base: info?.base || "", josi: info?.josi || "", jogo: info?.jogo || "", fetched: new Date().toISOString(), days };
     }
   } catch (e) { bedError = bedError || String(e.message || e).slice(0, 200); }
   const series = await Promise.all(dates.map((d) => tideDay(key, d).catch(() => [])));
