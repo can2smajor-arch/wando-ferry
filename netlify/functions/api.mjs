@@ -312,7 +312,10 @@ export default async (req) => {
     return json({ ok: false, error: "알 수 없는 경로" }, 60);
   } catch (e) {
     // 오류도 5분 캐시: 방문자마다 API를 다시 불러 하루 한도를 다 쓰는 일을 막음
-    return json({ ok: false, error: String(e.message || e).replace(/(serviceKey|access_token)=[^&\s"]+/g, "$1=***") }, 300);
+    let msg = String(e.message || e).replace(/(serviceKey|access_token)=[^&\s"]+/g, "$1=***");
+    // 인증키 오류면 키 길이와 끝 4자리만 함께 보여 줌 (Netlify 화면의 값과 맞는지 비교용, 키 전체는 절대 보이지 않음)
+    if (/SERVICE_KEY|인증키/.test(msg)) msg += ` [키 길이 ${key.length}자, 끝 ${key.slice(-4)}, 기호 ${/[^0-9A-Za-z]/.test(key) ? "있음" : "없음"}]`;
+    return json({ ok: false, error: msg }, 300);
   }
 };
 
