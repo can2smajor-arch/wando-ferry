@@ -181,6 +181,22 @@ html.big{zoom:1.2}
 .wx-hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
 .wx-hours div{flex:0 0 auto;min-width:62px;border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;display:flex;flex-direction:column;gap:1px;font-size:12px;font-variant-numeric:tabular-nums}
 .wx-hours b{font-size:15px}
+.wxt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+.wxt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:13px;min-width:100%}
+.wxt th,.wxt td{padding:5px 0;text-align:center;min-width:44px;white-space:nowrap}
+.wxt th.lab{position:sticky;left:0;z-index:1;background:var(--deck);text-align:left;padding:5px 8px;font-weight:600;color:var(--mute);font-size:12px;min-width:52px;border-right:1px solid var(--line)}
+.wxt .day td{font-weight:700;text-align:left;padding:6px 6px 2px;color:var(--ink);font-size:12px}
+.wxt .day td.d0{border-left:2px solid var(--line)}
+.wxt td.d0{border-left:2px solid var(--line)}
+.wxt .ic td{font-size:20px;line-height:1.1}
+.wxt .tp td{font-weight:700;font-size:15px}
+.wxt .rn td{color:#1f6fb5;font-size:12px}
+.wxt td.now{box-shadow:inset 0 0 0 2px var(--buoy)}
+.wxt .w td,.wxt .wv td{font-weight:700;color:#10233a}
+.c0{background:#e7f5ec}.c1{background:#9fe0b3}.c2{background:#ffd75e}.c3{background:#ff9a3d}.c4{background:#f0503c;color:#fff!important}
+.wxt .ar td span{display:inline-block;font-size:16px;line-height:1}
+.wxt-legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--mute);align-items:center}
+.wxt-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:3px}
 .wx-days{display:flex;flex-direction:column}
 .wx-day{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .wx-day .dn{font-weight:600}
@@ -746,6 +762,36 @@ async function loadWeather(){
   WX=!j?sampleWeather():(j.ok&&Array.isArray(j.hours))?j:{ok:false,msg:j.error};
   renderWeather();
 }
+// 시간별 표 (3시간 간격, 3일): 바람·파고는 신호등 색
+const wsdC=w=>w>=14?'c4':w>=11?'c3':w>=8?'c2':w>=4?'c1':'c0';
+const wavC=w=>w==null?'':w>=3?'c4':w>=2?'c3':w>=1.5?'c2':w>=0.5?'c1':'c0';
+function wxIcon(h,night){if(h.pty===3)return'🌨️';if(h.pty===2)return'🌨️';if(h.pty===1||h.pty===4)return h.sky===1?(night?'🌧️':'🌦️'):'🌧️';if(h.sky===1)return night?'🌙':'☀️';if(h.sky===3)return night?'☁️':'⛅';return'☁️'}
+function pcpTxt(p){if(!p||p==='강수없음'||p==='0')return'';if(/미만/.test(p))return'~1';const m=String(p).match(/[\d.]+/);return m?String(+m[0]):''}
+function wxTable(H,k){
+  const R=cur(),key=ymd8(k)+pad(Math.floor(k.min/60))+'00';
+  let i0=H.findIndex(h=>h.d+h.t>=key);if(i0<0)i0=0;
+  // 지금 시각부터 3시간 간격으로 (첫 칸은 지금 시각)
+  const cols=[H[i0],...H.slice(i0+1).filter(h=>+h.t.slice(0,2)%3===0)].slice(0,24);
+  const today=ymd8(k),dn=d=>{const diff=Math.round((Date.UTC(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6))-Date.UTC(k.y,k.m-1,k.d))/864e5);return(diff===0?'오늘':diff===1?'내일':diff===2?'모레':'')+' '+(+d.slice(4,6))+'/'+(+d.slice(6))+' '+'일월화수목금토'[new Date(Date.UTC(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6))).getUTCDay()]};
+  const isNew=(h,i)=>i===0||cols[i-1].d!==h.d;
+  const night=h=>{const ds=h.d.slice(0,4)+'-'+h.d.slice(4,6)+'-'+h.d.slice(6),st=sunTimes(ds,+R.tide.lat,+R.tide.lot),m=+h.t.slice(0,2)*60;return st?(m<st.rise||m>st.set):false};
+  const td=(h,i,inner,cls)=>'<td class="'+(isNew(h,i)&&i?'d0 ':'')+(i===0?'now ':'')+(cls||'')+'">'+inner+'</td>';
+  let days='',span=0;
+  cols.forEach((h,i)=>{if(isNew(h,i)){if(i)days+='<td colspan="'+span+'" class="'+(days?'d0':'')+'">'+esc(dn(cols[i-span].d))+'</td>';span=0}span++});
+  days+='<td colspan="'+span+'" class="'+(cols.length>span?'d0':'')+'">'+esc(dn(cols[cols.length-span].d))+'</td>';
+  const row=(lab,cls,f)=>'<tr class="'+cls+'"><th class="lab">'+lab+'</th>'+cols.map((h,i)=>f(h,i)).join('')+'</tr>';
+  return'<div class="wxt-wrap"><table class="wxt" aria-label="3시간 간격 날씨표">'+
+    '<tr class="day"><th class="lab"></th>'+days+'</tr>'+
+    row('시각','hr',(h,i)=>td(h,i,i===0?'지금':(+h.t.slice(0,2))+'시'))+
+    row('날씨','ic',(h,i)=>td(h,i,wxIcon(h,night(h))))+
+    row('기온 ℃','tp',(h,i)=>td(h,i,Math.round(h.tmp)+'°'))+
+    row('비 mm','rn',(h,i)=>td(h,i,pcpTxt(h.pcp)||(h.pop>=30?'<small style="color:var(--mute)">'+h.pop+'%</small>':'')))+
+    row('바람 m/s','w',(h,i)=>td(h,i,h.wsd.toFixed(0),wsdC(h.wsd)))+
+    row('풍향','ar',(h,i)=>td(h,i,'<span style="transform:rotate('+((h.vec+180)%360)+'deg)" title="'+dirTxt(h.vec)+'풍">↑</span>'))+
+    row('파고 m','wv',(h,i)=>td(h,i,h.wav==null?'-':h.wav.toFixed(1),wavC(h.wav)))+
+  '</table></div>'+
+  '<div class="wxt-legend"><span>바람·파고</span><span><i class="c0"></i>잔잔</span><span><i class="c1"></i>보통</span><span><i class="c2"></i>주의</span><span><i class="c3"></i>강함</span><span><i class="c4"></i>매우 강함</span><span>· 화살표는 바람이 부는 쪽 · 옆으로 밀어 보세요</span></div>';
+}
 function renderWeather(){
   const body=document.getElementById('wxbody');
   if(!WX){body.innerHTML='<div class="sub">불러오는 중…</div>';return}
@@ -772,7 +818,7 @@ function renderWeather(){
     '<div class="wx-stats"><div><span>바람</span><b class="lv-'+windLv(now.wsd)+'">'+now.wsd+'<small>m/s</small></b><small>'+dirTxt(now.vec)+'풍 · '+windTxt(now.wsd)+'</small></div>'+
     '<div><span>파고</span><b class="lv-'+wavLv(now.wav||0)+'">'+(now.wav??'-')+'<small>m</small></b><small>'+((now.wav||0)>=3?'풍랑 우려':(now.wav||0)>=2?'다소 높음':'잔잔한 편')+'</small></div>'+
     '<div><span>비 확률</span><b>'+now.pop+'<small>%</small></b><small>'+(now.pcp&&now.pcp!=='강수없음'&&now.pcp!=='0'?esc(now.pcp):'강수 없음')+'</small></div></div>'+
-    '<div class="wx-hours" aria-label="3시간 간격 예보">'+next.map(h=>'<div><span>'+(h.d===today?'':'내일 ')+(+h.t.slice(0,2))+'시</span><b>'+h.tmp+'°</b><span>'+condTxt(h)+'</span><span class="lv-'+windLv(h.wsd)+'">'+h.wsd+'m/s</span></div>').join('')+'</div>'+
+    wxTable(H,k)+
     '<div class="wx-days">'+days+'</div>'+
     '<div class="sub">바람 9m/s 이상은 노랑, 14m/s 이상은 빨강으로 표시합니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div>';
 }
@@ -828,9 +874,10 @@ function sampleTomorrow(){
 }
 function sampleWeather(){
   const hours=[],k=new Date(Date.now()+9*3600e3);k.setUTCMinutes(0,0,0);
-  for(let i=0;i<60;i++){const t=new Date(k.getTime()+i*3600e3),h=t.getUTCHours();
-    hours.push({d:t.toISOString().slice(0,10).replace(/-/g,''),t:pad(h)+'00',tmp:Math.round(8+4*Math.sin((h-9)/24*2*Math.PI)),sky:i%17<6?4:1,pty:0,pop:i%17<6?30:0,wsd:+(3+3*Math.abs(Math.sin(i/7))).toFixed(1),vec:300,wav:0.5,pcp:'강수없음',reh:70});}
-  return{ok:true,sample:true,base:ymd8(kst())+'0500',hours};
+  for(let i=0;i<72;i++){const t=new Date(k.getTime()+i*3600e3),h=t.getUTCHours(),rain=i<14||(i>40&&i<50);
+    const w=Math.max(1,Math.round((11-i*0.18+2*Math.sin(i/5))*10)/10);
+    hours.push({d:t.toISOString().slice(0,10).replace(/-/g,''),t:pad(h)+'00',tmp:Math.round(8+4*Math.sin((h-9)/24*2*Math.PI)),sky:rain?4:(i%20<8?3:1),pty:rain?1:0,pop:rain?70:(i%20<8?20:0),wsd:w,vec:i<30?320:200,wav:Math.round(Math.max(0.3,w/4.5)*10)/10,pcp:rain?(i%3?'1.0mm':'1mm 미만'):'강수없음',reh:70});}
+  return{ok:true,sample:true,base:ymd8(kst())+'2000',hours};
 }
 
 // ───────── 앱 설치 · 친구에게 보내기 ─────────
