@@ -756,7 +756,7 @@ let WX=null;
 const DIR16=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
 const dirTxt=v=>DIR16[Math.round(((v%360)+360)%360/22.5)%16];
 const condTxt=h=>h.pty===1?'비':h.pty===2?'비/눈':h.pty===3?'눈':h.pty===4?'소나기':h.sky===1?'맑음':h.sky===3?'구름많음':'흐림';
-const windLv=w=>w>=14?'r':w>=9?'y':'g';
+const windLv=w=>w>=14?'r':w>=8?'y':'g';
 const windTxt=w=>w>=14?'매우 강함':w>=9?'강함':w>=4?'보통':'약함';
 const wavLv=w=>w>=3?'r':w>=2?'y':'g';
 async function loadWeather(){
@@ -822,7 +822,7 @@ function renderWeather(){
     '<div><span>비 확률</span><b>'+now.pop+'<small>%</small></b><small>'+(now.pcp&&now.pcp!=='강수없음'&&now.pcp!=='0'?esc(now.pcp):'강수 없음')+'</small></div></div>'+
     wxTable(H,k)+
     '<div class="wx-days">'+days+'</div>'+
-    '<div class="sub">바람 9m/s 이상은 노랑, 14m/s 이상은 빨강으로 표시합니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div>';
+    '<div class="sub">빨강은 기상청 풍랑주의보 기준(바람 14m/s, 파고 3m)입니다. 노랑·주황은 그보다 낮은 참고 단계입니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div>';
 }
 
 // ───────── 기상특보 (지역 구역만) ─────────
