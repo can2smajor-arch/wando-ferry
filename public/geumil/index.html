@@ -500,7 +500,7 @@ function renderLiveLine(R,line,k){
   if(sl){all=sl;src='<span class="badge-old">선사 시간표</span>';if(!all.length)emptyMsg='오늘 이 방향 배가 시간표에 없습니다.';}
   else if(d){
     const seen=new Set();
-    d.items.filter(x=>lineMatch(line,x.route)&&(R.home.test(x.from)===(dir==='out'))).forEach(x=>{
+    d.items.filter(x=>lineMatch(line,x.route)&&(line.allDir||R.home.test(x.from)===(dir==='out'))).forEach(x=>{
       const key=x.t+'|'+x.from+'|'+x.ship;if(seen.has(key))return;seen.add(key);
       all.push({t:t4(x.t),min:toMin(t4(x.t)),at:x.from,ship:x.ship,live:d.live?x:null,unsure:!d.live});
     });
