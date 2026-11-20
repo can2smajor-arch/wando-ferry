@@ -497,7 +497,8 @@ function renderLiveLine(R,line,k){
   return'<section class="card"><h2><span>'+esc(line.title[dir])+' '+src+'</span><small>'+esc(line.by)+'</small></h2>'+
     cardBody(all,k,{live:!!(d&&d.live),emptyMsg,firstTomorrow:true})+
     (ships.length?'<div class="ships">배: '+ships.map(esc).join(', ')+'</div>':'')+oldNote+
-    (line.note?'<div class="note">'+esc(line.note)+'</div>':'')+'</section>';
+    (line.note?'<div class="note">'+esc(line.note)+'</div>':'')+
+    (line.band&&line.band.url?'<a class="more" href="'+esc(line.band.url)+'">결항·변경 공지: '+esc(line.band.name)+' 밴드</a>':'')+'</section>';
 }
 function renderGroups(){
   const R=cur();if(!R)return;
