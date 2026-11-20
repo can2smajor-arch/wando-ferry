@@ -229,7 +229,7 @@
       warn: [W_WANDO, W_GOHEUNG, W_SEA_W, W_SEA_E],
       groups: [
         { id: 'nr', label: '노력', lines: [L(RE.gahak, '가학항 → 노력항', '노력항 → 가학항', '완도농협 완농페리2호 · 약 20분')], tmr: byRe(/노력/) },
-        { id: 'dm', label: '당목(약산)', lines: [L(RE.dangmokGahak, '가학항 → 당목항(약산)', '당목항(약산) → 가학항', '선사 확인 중', { band: BAND.komsa, note: '공단 운항 자료(2026.11.20 확인)에는 이 노선이 없습니다. 결항·변경 소식은 공단 완도운항관리센터 밴드에서 확인하세요.' })], tmr: byRe(RE.dangmokGahak) },
+        { id: 'dm', label: '당목(약산)', lines: [L(RE.dangmokGahak, '가학항 → 당목항(약산)', '당목항(약산) → 가학항', '선사 확인 중', { noKomsa: true, band: BAND.komsa, note: '공단 운항 자료(2026.11.20 확인)에는 이 노선이 없습니다. 결항·변경 소식은 공단 완도운항관리센터 밴드에서 확인하세요.' })], tmr: byRe(RE.dangmokGahak) },
         { id: 'nd', label: '녹동·동송(울포)', lines: [L(RE.dongsong, '녹동·우두 ↔ 금당(울포) ↔ 금일(동송)', '녹동·우두 ↔ 금당(울포) ↔ 금일(동송)', '평화해운 평화훼리13호', { allDir: true, note: '녹동↔동송 배가 금당 울포에 들릅니다. 시각은 각 항구(녹동·우두·동송) 출발 기준이라 울포에 들르는 시각은 매표소에 확인하세요.' })], tmr: byRe(RE.dongsong) },
       ],
       bands: [BAND.geumdang], tels: [TEL_PH.ulpo, TEL_PH.main, TEL_PH.sub], links: [],

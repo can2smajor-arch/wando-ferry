@@ -5,6 +5,7 @@
 // - /api/weather/:지역  : 기상청 단기예보(지역 격자) — 1시간 캐시
 // - /api/tide/:지역     : 국립해양조사원 TideBED(지역 좌표, 14일) → 안 되면 완도 조석예보 — 6시간 캐시
 // - /api/band           : 선사·항구 밴드 최근 글(BAND_TOKEN 이 있을 때만) — 낮 10분 · 밤 1시간 캐시
+// - /api/health         : 자동 점검용. 모든 자료가 정상이면 HEALTH_OK, 아니면 HEALTH_FAIL과 이유 (외부 감시 서비스가 5분마다 확인)
 // - /api/warn           : 기상청 기상특보 통보문(광주청 156 + 제주청 184) — 10분 캐시. 구역 고르기는 화면에서
 // 인증키: Netlify 환경변수 DATA_GO_KR_KEY (공공데이터포털 일반 인증키, Decoding). 코드·대화에 넣지 않음.
 // KOMSA_HUB_URL 을 넣으면 KOMSA를 직접 부르지 않고 그 주소(다른 허브)의 /api/komsa 자료를 받아 씀.
@@ -318,10 +319,52 @@ export function cleanKey(k) {
   return k;
 }
 
+// ───── 자동 점검 ─────
+// 같은 사이트의 다른 경로를 CDN 캐시로 받아 봄 → 공공데이터 호출은 늘지 않음
+export function routeChecks(regions) {
+  const out = [];
+  for (const r of regions) for (const g of r.groups) {
+    if (g.optional) continue;
+    for (const l of g.lines) {
+      if (l.noKomsa) continue;
+      const re = l.fixed ? l.api && l.api.re : l.re;
+      if (re) out.push({ name: `${r.name}·${g.label}`, re, not: l.not });
+    }
+  }
+  return out;
+}
+export function judgeHealth({ komsa, weather, tide, warn }, regions) {
+  const bad = [];
+  if (!komsa || !komsa.ok) bad.push("운항정보: " + (komsa?.error || "응답 없음"));
+  else {
+    if (komsa.date !== kstDate()) bad.push(`운항정보 날짜가 오늘이 아님(${komsa.date})`);
+    if (!komsa.items?.length) bad.push("운항정보: 완도군 항로 0건");
+    else {
+      const miss = new Set();
+      for (const c of routeChecks(regions)) if (!komsa.items.some((x) => c.re.test(x.route) && !(c.not && c.not.test(x.route)))) miss.add(c.name);
+      if (miss.size) bad.push("공단 자료에 없는 노선(항로 이름 바뀜?): " + [...miss].join(", "));
+    }
+  }
+  if (!weather || !weather.ok || !weather.hours?.length) bad.push("날씨: " + (weather?.error || "자료 없음"));
+  if (!tide || !tide.ok) bad.push("물때: " + (tide?.error || "응답 없음"));
+  else if (tide.kind !== "bed") bad.push("물때: 지역 계산 실패, 완도 예보로 대체 중" + (tide.bedError ? ` (${tide.bedError})` : ""));
+  if (!warn || !warn.ok) bad.push("기상특보: " + (warn?.error || "응답 없음"));
+  return bad;
+}
+async function health(req) {
+  const base = new URL(req.url).origin;
+  const get = (p) => getJson(base + p).catch((e) => ({ ok: false, error: String(e.message || e) }));
+  const [komsa, weather, tide, warn] = await Promise.all([get("/api/komsa"), get("/api/weather/wando"), get("/api/tide/cheongsan"), get("/api/warn")]);
+  const bad = judgeHealth({ komsa, weather, tide, warn }, REGIONS);
+  const body = bad.length ? "HEALTH_FAIL\n" + bad.map((b) => "- " + b).join("\n") : `HEALTH_OK\n운항 ${komsa.items.length}건 · 물때 ${tide.station} · ${new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace("T", " ")} KST`;
+  return new Response(body, { status: bad.length ? 503 : 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "netlify-cdn-cache-control": "public, durable, s-maxage=300" } });
+}
+
 export default async (req) => {
   const key = cleanKey(process.env.DATA_GO_KR_KEY);
   const parts = new URL(req.url).pathname.split("/").filter(Boolean); // ["api", which, region?]
   const which = parts[1], region = REGIONS.find((r) => r.id === parts[2]);
+  if (which === "health") return health(req);
   if (!key && which !== "band" && !(which === "komsa" && process.env.KOMSA_HUB_URL)) return json({ ok: false, error: "DATA_GO_KR_KEY 환경변수가 없습니다" }, 60);
   try {
     if (which === "komsa") return json(await komsa(key), komsaCacheSeconds());
@@ -342,4 +385,4 @@ export default async (req) => {
   }
 };
 
-export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/band", "/api/weather/:region", "/api/tide/:region"] };
+export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/band", "/api/health", "/api/weather/:region", "/api/tide/:region"] };
