@@ -477,9 +477,28 @@ function renderFixed(line,k){
   const note=line.note||(sz==='winter'?line.noteW:line.noteS);
   return'<section class="card"><h2>'+esc(line.from)+' → '+esc(line.to)+' <small>'+esc(line.by)+'</small></h2>'+cardBody(all,k,{live,fixed:true,extra:extraNote})+(note?'<div class="note">'+esc(note)+'</div>':'')+'</section>';
 }
+// 선사 시간표(섬 기항 시각) 한 방향 만들기: 오늘(짝수·홀수 날, 동절기) 해당 시각 + 공단 자료로 통제 여부 맞춤
+function stopList(R,line,k,d){
+  const st=line.stops&&line.stops[dir];if(!st)return null;
+  const par=k.d%2===0?'even':'odd',win=season(k.m)==='winter';
+  const used=new Set();
+  const out=st.filter(s=>!s.days||s.days===par).filter(s=>dir!=='out'||!R.home||R.home.test(s.at)).map(s=>{
+    const t=(win&&s.tw)||s.t,v=(win&&s.vw)||s.v;let live=null;
+    if(d&&d.live){let bd=21;for(const x of d.items){if(!lineMatch(line,x.route)||!/섬사랑/.test(x.ship))continue;const df=Math.abs(toMin(t4(x.t))-toMin(v));if(df<bd){bd=df;live=x}}}
+    if(live)used.add(live);
+    return{t,min:toMin(t),at:s.at+(s.to?'→'+s.to:''),ship:live?live.ship:'',live};
+  });
+  // 같은 방향의 다른 배(섬사랑호가 아닌 배, 예: 노화카훼리)는 공단 자료 그대로 더함
+  if(d)d.items.filter(x=>lineMatch(line,x.route)&&!/섬사랑/.test(x.ship)&&R.home.test(x.from)===(dir==='out')).forEach(x=>{
+    out.push({t:t4(x.t),min:toMin(t4(x.t)),at:x.from,ship:x.ship,live:d.live?x:null,unsure:!d.live});
+  });
+  return out.sort((a,b)=>a.min-b.min);
+}
 function renderLiveLine(R,line,k){
   const d=komsaData();let all=[],src='',emptyMsg='';
-  if(d){
+  const sl=stopList(R,line,k,d);
+  if(sl){all=sl;src='<span class="badge-old">선사 시간표</span>';if(!all.length)emptyMsg='오늘 이 방향 배가 시간표에 없습니다.';}
+  else if(d){
     const seen=new Set();
     d.items.filter(x=>lineMatch(line,x.route)&&(R.home.test(x.from)===(dir==='out'))).forEach(x=>{
       const key=x.t+'|'+x.from+'|'+x.ship;if(seen.has(key))return;seen.add(key);
@@ -493,7 +512,7 @@ function renderLiveLine(R,line,k){
   if(!all.length&&line.fallback&&line.fallback[dir]){all=norm(line.fallback[dir]);src='<span class="badge-old">평소 시간표</span>';emptyMsg='';}
   if(!d&&!all.length)emptyMsg=KOMSA_ERR?'운항정보를 받지 못했습니다. 선사·매표소에 확인하세요.':'운항정보 불러오는 중…';
   const ships=[...new Set(all.map(o=>o.ship).filter(Boolean))];
-  const oldNote=d&&!d.live&&all.length?'<div class="note">오늘 운항정보를 받지 못해 지난 '+(+d.date.slice(4,6))+'월 '+(+d.date.slice(6))+'일 자료로 보여 줍니다. 요일·통제에 따라 다를 수 있습니다.</div>':'';
+  const oldNote=!sl&&d&&!d.live&&all.length?'<div class="note">오늘 운항정보를 받지 못해 지난 '+(+d.date.slice(4,6))+'월 '+(+d.date.slice(6))+'일 자료로 보여 줍니다. 요일·통제에 따라 다를 수 있습니다.</div>':'';
   return'<section class="card"><h2><span>'+esc(line.title[dir])+' '+src+'</span><small>'+esc(line.by)+'</small></h2>'+
     cardBody(all,k,{live:!!(d&&d.live),emptyMsg,firstTomorrow:true})+
     (ships.length?'<div class="ships">배: '+ships.map(esc).join(', ')+'</div>':'')+oldNote+
@@ -785,8 +804,8 @@ function sampleKomsa(){
   add('완도-청산','청산',['06:30','08:20','09:40','12:00','15:30','18:00'],'슬로시티청산도');
   add('완도-여서(청산2회)','여서',['07:15'],'섬사랑7호',{'07:15':{se:'통제',reason:'풍랑주의보'}});
   add('완도-여서(청산2회)','완도',['14:00'],'섬사랑7호',{'14:00':{se:'통제',reason:'풍랑주의보'}});
-  add('완도-모도(순환)','완도',['07:10','11:00','15:30'],'섬사랑2호');
-  add('완도-덕우(오후)2','완도',['07:20','14:30'],'섬사랑5호');
+  add('완도모도(순환)','완도',['07:10','11:00','15:30'],'섬사랑2호');add('완도덕우(황제)','완도',['06:50','08:00'],'섬사랑5호');add('완도덕우(오후)2','완도',['14:30'],'섬사랑5호',{'14:30':{se:'통제',reason:'풍랑주의보'}});
+  
   add('화흥포-소안','화흥포',['06:40','07:50','08:50','09:50','10:50','11:50','12:50','13:50','14:50','15:50','17:10','21:00'],'대한');
   add('화흥포-소안','소안',['06:45','08:05','09:05','10:05','11:05','12:05','13:05','14:05','15:05','16:05','17:05','19:45'],'민국');
   add('땅끝산양','산양',['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','16:50','17:40'],'드림장보고');
