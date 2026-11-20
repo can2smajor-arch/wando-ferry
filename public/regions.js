@@ -109,7 +109,7 @@
 
   const R = [
     {
-      id: 'wando', kw: /청산|여서|모도|덕우|제주|추자|화흥포|소안/, name: '완도읍', title: '완도항·화흥포에서 출발', desc: '청산·여서·모도·덕우·제주, 화흥포→소안·노화',
+      id: 'wando', map: { lat: 34.311, lon: 126.755, at: 'nw' }, kw: /청산|여서|모도|덕우|제주|추자|화흥포|소안/, name: '완도읍', title: '완도항·화흥포에서 출발', desc: '청산·여서·모도·덕우·제주, 화흥포→소안·노화',
       home: /^(완도|화흥포)/, dir: ['완도에서 출발', '완도로 오는 배'],
       wx: { nx: 57, ny: 56, label: '완도읍' }, tide: { lat: '34.311', lot: '126.755', label: '완도항' },
       warn: [W_WANDO, W_SEA_W],
@@ -126,7 +126,7 @@
       links: [['군청 시간표: 화흥포', 'https://www.wando.go.kr/wando/sub.cs?m=350']],
     },
     {
-      id: 'nohwa', kw: /동천|화흥포|산양|땅끝|이목|넙|당사|남성|횡간|노화|보길/, name: '노화·보길', title: '노화도·보길도·넙도', desc: '동천↔화흥포, 산양↔땅끝, 넙도·서넙도, 당사·횡간·섬순회',
+      id: 'nohwa', map: { lat: 34.19, lon: 126.59, at: 'w' }, kw: /동천|화흥포|산양|땅끝|이목|넙|당사|남성|횡간|노화|보길/, name: '노화·보길', title: '노화도·보길도·넙도', desc: '동천↔화흥포, 산양↔땅끝, 넙도·서넙도, 당사·횡간·섬순회',
       // 노화뱃길과 같은 고정 시간표 방식
       wx: { nx: 53, ny: 53, label: '노화도' }, tide: { lat: '34.19', lot: '126.59', label: '동천항' },
       warn: [W_WANDO, W_HAENAM, W_SEA_W, W_FAR_W],
@@ -176,7 +176,7 @@
       source: '시간표: 화흥포 항로는 소안농협 밴드 동절기 시간표(2026.9.29. 공지), 땅끝 항로 동절기는 노화농협 밴드(2026.10.1.~2027.2.말)와 해광운수 밴드 공지, 하절기는 완도군청 여객선정보. 넙도·당사·횡간·섬순회는 공단 운항 자료와 민간 시간표 참고.',
     },
     {
-      id: 'soan', kw: /소안|화흥포|당사|남성|횡간/, name: '소안', title: '소안도·당사도·횡간도', desc: '소안↔화흥포(동천 경유), 이목↔당사, 섬순회·횡간',
+      id: 'soan', map: { lat: 34.165, lon: 126.645, at: 's' }, kw: /소안|화흥포|당사|남성|횡간/, name: '소안', title: '소안도·당사도·횡간도', desc: '소안↔화흥포(동천 경유), 이목↔당사, 섬순회·횡간',
       home: /^(소안|당사|횡간)/, dir: ['소안에서 나가기', '소안으로 들어오기'],
       wx: { nx: 55, ny: 53, label: '소안도' }, tide: { lat: '34.165', lot: '126.645', label: '소안항' },
       warn: [W_WANDO, W_SEA_W, W_FAR_W],
@@ -189,7 +189,7 @@
       tels: [...TEL_HH, TEL_SR[1]],
     },
     {
-      id: 'cheongsan', kw: /청산|여서|장도|모도/, name: '청산', title: '청산도·여서도·장도·모도', desc: '청산↔완도, 여서·장도, 모도',
+      id: 'cheongsan', map: { lat: 34.181, lon: 126.858, at: 's' }, kw: /청산|여서|장도|모도/, name: '청산', title: '청산도·여서도·장도·모도', desc: '청산↔완도, 여서·장도, 모도',
       home: /^(청산|도청|여서|장도|모도|모서|모동|소모)/, dir: ['섬에서 나가기', '섬으로 들어오기'],
       wx: { nx: 59, ny: 53, label: '청산도' }, tide: { lat: '34.181', lot: '126.858', label: '도청항' },
       warn: [W_WANDO, W_YEOSEO, W_SEA_W, W_FAR_W, W_FAR_E],
@@ -201,7 +201,7 @@
       bands: [BAND.cheongsan], tels: [TEL_WT, TEL_SR[7], TEL_SR[2], TEL_HG], links: [],
     },
     {
-      id: 'geumil', kw: /일정|금일|동송|당목/, name: '금일', title: '금일도 (일정·동송)', desc: '일정↔당목(약산), 동송↔녹동·우두(고흥)',
+      id: 'geumil', map: { lat: 34.345, lon: 127.03, at: 'e' }, kw: /일정|금일|동송|당목/, name: '금일', title: '금일도 (일정·동송)', desc: '일정↔당목(약산), 동송↔녹동·우두(고흥)',
       home: /^(일정|금일|동송)/, dir: ['금일에서 나가기', '금일로 들어오기'],
       wx: { nx: 62, ny: 57, label: '금일도' }, tide: { lat: '34.345', lot: '127.03', label: '일정항' },
       warn: [W_WANDO, W_GOHEUNG, W_SEA_W, W_SEA_E, W_FAR_E],
@@ -212,7 +212,7 @@
       bands: [BAND.dangmok], tels: [...TEL_YS, TEL_PH.dongsong, TEL_PH.main, TEL_PH.f9], links: [],
     },
     {
-      id: 'saengil', kw: /서성|생일|당목|덕우/, name: '생일', title: '생일도 (서성·용출)', desc: '서성↔당목(약산), 덕우 항로(용출)',
+      id: 'saengil', map: { lat: 34.32, lon: 126.975, at: 's' }, kw: /서성|생일|당목|덕우/, name: '생일', title: '생일도 (서성·용출)', desc: '서성↔당목(약산), 덕우 항로(용출)',
       home: /^(서성|생일|용출)/, dir: ['생일에서 나가기', '생일로 들어오기'],
       wx: { nx: 61, ny: 56, label: '생일도' }, tide: { lat: '34.32', lot: '126.975', label: '서성항' },
       warn: [W_WANDO, W_SEA_W, W_SEA_E, W_FAR_E],
@@ -223,7 +223,7 @@
       bands: [BAND.dangmok], tels: [TEL_YS[0], TEL_YS[2], TEL_SR[5]], links: [],
     },
     {
-      id: 'geumdang', kw: /가학|금당|노력|울포/, name: '금당', title: '금당도 (가학·울포)', desc: '가학↔노력, 울포↔녹동·동송, 가학↔당목',
+      id: 'geumdang', map: { lat: 34.43, lon: 127.11, at: 'w' }, kw: /가학|금당|노력|울포/, name: '금당', title: '금당도 (가학·울포)', desc: '가학↔노력, 울포↔녹동·동송, 가학↔당목',
       home: /^(가학|금당|울포|차우)/, dir: ['금당에서 나가기', '금당으로 들어오기'],
       wx: { nx: 63, ny: 58, label: '금당도' }, tide: { lat: '34.43', lot: '127.11', label: '가학항 부근' },
       warn: [W_WANDO, W_GOHEUNG, W_SEA_W, W_SEA_E],
@@ -235,7 +235,7 @@
       bands: [BAND.geumdang], tels: [TEL_PH.ulpo, TEL_PH.main, TEL_PH.sub], links: [],
     },
     {
-      id: 'deogu', kw: /덕우|황제/, name: '덕우·황제', title: '덕우도·황제도', desc: '완도↔덕우(모황·생일 경유)',
+      id: 'deogu', map: { lat: 34.24, lon: 127.03, at: 'e' }, kw: /덕우|황제/, name: '덕우·황제', title: '덕우도·황제도', desc: '완도↔덕우(모황·생일 경유)',
       home: /^(덕우|황제)/, dir: ['섬에서 나가기', '섬으로 들어오기'],
       wx: { nx: 62, ny: 54, label: '덕우도' }, tide: { lat: '34.24', lot: '127.03', label: '덕우도 부근' },
       warn: [W_WANDO, W_SEA_W, W_SEA_E, W_FAR_E],

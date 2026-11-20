@@ -6,6 +6,7 @@
 // - /api/tide/:지역     : 국립해양조사원 TideBED(지역 좌표, 14일) → 안 되면 완도 조석예보 — 6시간 캐시
 // - /api/band           : 선사·항구 밴드 최근 글(BAND_TOKEN 이 있을 때만) — 낮 10분 · 밤 1시간 캐시
 // - /api/health         : 자동 점검용. 모든 자료가 정상이면 HEALTH_OK, 아니면 HEALTH_FAIL과 이유 (외부 감시 서비스가 5분마다 확인)
+// - /api/now            : 지역 고르기 지도용 — 모든 지역의 지금 날씨 한 줄씩 (지역별 날씨 캐시를 그대로 씀)
 // - /api/warn           : 기상청 기상특보 통보문(광주청 156 + 제주청 184) — 10분 캐시. 구역 고르기는 화면에서
 // 인증키: Netlify 환경변수 DATA_GO_KR_KEY (공공데이터포털 일반 인증키, Decoding). 코드·대화에 넣지 않음.
 // KOMSA_HUB_URL 을 넣으면 KOMSA를 직접 부르지 않고 그 주소(다른 허브)의 /api/komsa 자료를 받아 씀.
@@ -360,6 +361,19 @@ async function health(req) {
   return new Response(body, { status: bad.length ? 503 : 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "netlify-cdn-cache-control": "public, durable, s-maxage=300" } });
 }
 
+// ───── 지역별 지금 날씨 (지도용) ─────
+async function nowAll(req) {
+  const base = new URL(req.url).origin;
+  const kst = new Date(Date.now() + 9 * 3600e3), key = kst.toISOString().slice(0, 10).replace(/-/g, "") + String(kst.getUTCHours()).padStart(2, "0") + "00";
+  const res = await Promise.all(REGIONS.map((r) => getJson(`${base}/api/weather/${r.id}`).catch(() => null)));
+  const out = REGIONS.map((r, i) => {
+    const j = res[i]; if (!j || !j.ok || !j.hours?.length) return { id: r.id, ok: false };
+    const h = j.hours.find((x) => x.d + x.t >= key) || j.hours[0];
+    return { id: r.id, ok: true, tmp: h.tmp, sky: h.sky, pty: h.pty, wsd: h.wsd, vec: h.vec, wav: h.wav };
+  });
+  return { ok: true, fetched: new Date().toISOString(), regions: out };
+}
+
 export default async (req) => {
   const key = cleanKey(process.env.DATA_GO_KR_KEY);
   const parts = new URL(req.url).pathname.split("/").filter(Boolean); // ["api", which, region?]
@@ -370,6 +384,7 @@ export default async (req) => {
     if (which === "komsa") return json(await komsa(key), komsaCacheSeconds());
     if (which === "tomorrow") return json(await tomorrow(key), 1800);
     if (which === "warn") return json(await warn(key), 600);
+    if (which === "now") return json(await nowAll(req), 1800);
     if (which === "band") return json(await band(), komsaCacheSeconds() === 900 ? 600 : 3600);
     if (which === "weather" || which === "tide") {
       if (!region) return json({ ok: false, error: "알 수 없는 지역" }, 3600);
@@ -385,4 +400,4 @@ export default async (req) => {
   }
 };
 
-export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/band", "/api/health", "/api/weather/:region", "/api/tide/:region"] };
+export const config = { path: ["/api/komsa", "/api/tomorrow", "/api/warn", "/api/band", "/api/health", "/api/now", "/api/weather/:region", "/api/tide/:region"] };

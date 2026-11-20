@@ -227,6 +227,26 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
 .hsub{font-size:14px;opacity:.9;margin-top:-4px}
 .picker{display:flex;flex-direction:column;gap:10px}
 .picker .lead{font-size:15px;line-height:1.5;word-break:keep-all}
+.imap{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#cfe6f2}
+:root[data-theme="dark"] .imap{background:#0f2a3d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .imap{background:#0f2a3d}}
+.imap svg{display:block;width:100%;height:auto}
+.imap .land{fill:#e8e2cf;stroke:#b9b29a;stroke-width:.8}
+.imap .main{fill:#ddd6bf}
+.imap .iname{font-size:8.5px;fill:#6d6650;font-family:var(--f-body)}
+.imap .rg{cursor:pointer}
+.imap .rg rect{fill:#fff;stroke:#123d63;stroke-width:1.2;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.25))}
+.imap .rg.cur rect{fill:#123d63}.imap .rg.cur text{fill:#fff}
+.imap .rg.ctl rect{stroke:#d63a1f;stroke-width:2}
+.imap .rg text{font-family:var(--f-body);fill:#10233a}
+.imap .nm{font-size:10.5px;font-weight:700}.imap .tv{font-size:10px}
+.imap .dot{fill:#123d63;stroke:#fff;stroke-width:1.5}
+.imap .note{position:absolute;right:6px;bottom:4px;font-size:10px;color:#4a5d6e;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:6px}
+.wmap{display:flex;flex-direction:column;gap:8px}
+.wmap .row{display:flex;gap:6px;flex-wrap:wrap}
+.wmap button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--deck);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.wmap button[aria-pressed="true"]{background:var(--sea);color:var(--on-sea);border-color:var(--sea)}
+.wmap iframe{width:100%;height:360px;border:0;border-radius:12px;background:#ddd}
 .regions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .regions button{font:inherit;text-align:left;border:1px solid var(--line);background:var(--deck);color:var(--ink);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-height:92px}
 .regions button b{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.1;color:var(--sea);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -268,6 +288,7 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
 
   <section class="picker" id="picker" hidden>
     <div class="lead" id="pickerlead"><b>어느 섬 배를 볼까요?</b><br>사는 곳이나 가려는 섬을 고르세요. 고른 지역은 다음에 열 때도 기억합니다.</div>
+    <div class="imap" id="imap"></div>
     <div class="regions" id="regions"></div>
   </section>
 
@@ -303,6 +324,13 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
       <div class="wxwarn" id="wxwarn"></div>
       <div id="wxbody" style="display:flex;flex-direction:column;gap:12px"></div>
       <div class="sunrow" id="sun" aria-label="일출·일몰"></div>
+    </section>
+
+    <section class="card wmap" id="wmap">
+      <h2>움직이는 바람·비 지도 <small>Windy</small></h2>
+      <div class="sub">지도를 열면 데이터를 많이 씁니다(와이파이 권장). 필요할 때만 여세요.</div>
+      <div class="row" id="wmapbtn"><button type="button" data-o="wind">바람</button><button type="button" data-o="rain">비</button><button type="button" data-o="waves">파도</button></div>
+      <div id="wmapbox"></div>
     </section>
 
     <section class="card" id="tide">
@@ -391,7 +419,7 @@ function setRegion(id,fromUser){
   document.getElementById('picker').hidden=true;document.getElementById('main').hidden=false;document.getElementById('btn-region').hidden=false;
   document.getElementById('rname').textContent=R.name;document.getElementById('rtitle').textContent=R.title;
   document.title='완도뱃길 – '+R.name+' 배·물때·날씨';
-  WX=null;renderStatic();renderAll();renderTomorrow();renderWeather();renderWarn();renderNotices();
+  document.getElementById('wmapbox').innerHTML='';document.querySelectorAll('#wmapbtn button').forEach(b=>b.setAttribute('aria-pressed','false'));WX=null;renderStatic();renderAll();renderTomorrow();renderWeather();renderWarn();renderNotices();
   resetTide();loadWeather();loadTide();
   if(fromUser)window.scrollTo(0,0);
 }
@@ -400,7 +428,48 @@ function openPicker(){
   document.getElementById('pickerlead').innerHTML=RID?'<b>지역 바꾸기</b><br>다른 섬을 고르세요.':'<b>어느 섬 배를 볼까요?</b><br>사는 곳이나 가려는 섬을 고르세요. 고른 지역은 다음에 열 때도 기억합니다.';
   renderPicker();window.scrollTo(0,0);
 }
+// ───────── 섬 지도 (지역 고르기 화면, 위치만 맞춘 개략도) ─────────
+let NOW=null;
+async function loadNow(){const j=await api('/api/now');NOW=!j?sampleNow():(j.ok?j:null);if(!document.getElementById('picker').hidden)renderMap()}
+function sampleNow(){const w=[11,12,10,9,7,8,6,9];return{ok:true,sample:true,regions:REGIONS.map((r,i)=>({id:r.id,ok:true,tmp:8+(i%3),sky:i%2?4:3,pty:i<3?1:0,wsd:w[i%w.length],vec:320,wav:+(w[i%w.length]/4.5).toFixed(1)}))}}
+const MAPB={lat0:33.95,lat1:34.48,lon0:126.45,lon1:127.20,W:360,H:330};
+const mx=lon=>(lon-MAPB.lon0)/(MAPB.lon1-MAPB.lon0)*MAPB.W,my=lat=>(MAPB.lat1-lat)/(MAPB.lat1-MAPB.lat0)*MAPB.H;
+// 섬 모양은 위치만 맞춘 단순한 타원 (실제 해안선 아님)
+const ISLES=[['완도',34.33,126.73,30,17,-18],['신지도',34.325,126.83,15,5,0],['고금도',34.39,126.81,17,12,0],['약산',34.39,126.90,11,9,0],['노화도',34.195,126.575,13,9,0],['보길도',34.165,126.555,12,7,0],
+ ['소안도',34.16,126.645,12,7,0],['청산도',34.18,126.86,13,11,0],['여서도',33.985,126.92,5,4,0],['금일도',34.34,127.02,17,6,-10],['생일도',34.315,126.975,7,5,0],['금당도',34.43,127.10,9,6,0],['덕우도',34.24,127.03,4,3,0],['당사도',34.11,126.62,3,2,0],['넙도',34.21,126.48,5,4,0]];
+function renderMap(){
+  const box=document.getElementById('imap');if(!box)return;
+  const W=MAPB.W,H=MAPB.H;
+  let g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="완도 섬 지도(개략도)">';
+  // 육지(해남·강진·고흥 쪽) 대략
+  g+='<path class="land main" d="M0 0H175L165 22L120 40L95 70L72 66L50 92L20 80L0 96Z"/><path class="land main" d="M300 0H360V120L338 95L330 60L310 40Z"/>';
+  g+='<text class="iname" x="18" y="40">해남</text><text class="iname" x="330" y="40">고흥</text>';
+  ISLES.forEach(([n,la,lo,rx,ry,rot])=>{const x=mx(lo),y=my(la);g+='<ellipse class="land" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+' '+x.toFixed(1)+' '+y.toFixed(1)+')"/>'+(rx>=9?'<text class="iname" x="'+(x-rx).toFixed(0)+'" y="'+(y+ry+9).toFixed(0)+'">'+n+'</text>':'')});
+  const OFF={nw:[-78,-40],w:[-80,-6],e:[6,-18],s:[-36,8],n:[-36,-46]};
+  REGIONS.forEach(r=>{
+    if(!r.map)return;const x=mx(r.map.lon),y=my(r.map.lat),[dx,dy]=OFF[r.map.at]||OFF.s,bx=Math.max(2,Math.min(W-76,x+dx)),by=Math.max(2,Math.min(H-38,y+dy));
+    const n=NOW&&NOW.regions.find(o=>o.id===r.id),ok=n&&n.ok;
+    const line=ok?wxIcon(n,false)+' '+Math.round(n.tmp)+'° · <tspan class="lv-'+windLv(n.wsd)+'" font-weight="700">'+Math.round(n.wsd)+'m/s</tspan>':'날씨 불러오는 중';
+    g+='<line x1="'+x.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+(bx+37)+'" y2="'+(by+19)+'" stroke="#123d63" stroke-width=".8" opacity=".5"/>'+
+      '<g class="rg'+(r.id===RID?' cur':'')+(regionCtl(r)?' ctl':'')+'" data-r="'+r.id+'" role="button" tabindex="0"><rect x="'+bx+'" y="'+by+'" width="74" height="36" rx="8"/>'+
+      '<text class="nm" x="'+(bx+6)+'" y="'+(by+14)+'">'+esc(r.name)+(regionCtl(r)?' ⚠':'')+'</text><text class="tv" x="'+(bx+6)+'" y="'+(by+29)+'">'+line+'</text></g>'+
+      '<circle class="dot" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.2"/>';
+  });
+  g+='</svg><div class="note">'+(NOW&&NOW.sample?'예시 날씨 · ':'')+'위치만 맞춘 개략도 · 바람은 지금 기준</div>';
+  box.innerHTML=g;
+  box.querySelectorAll('.rg').forEach(el=>{const go=()=>setRegion(el.dataset.r,true);el.addEventListener('click',go);el.addEventListener('keydown',e=>{if(e.key==='Enter')go()})});
+}
+// ───────── 움직이는 지도 (Windy, 버튼을 눌렀을 때만 불러옴) ─────────
+function openWindy(o){
+  const R=cur(),box=document.getElementById('wmapbox');if(!R)return;
+  document.querySelectorAll('#wmapbtn button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.o===o));
+  const la=R.map?R.map.lat:34.25,lo=R.map?R.map.lon:126.8;
+  const src='https://embed.windy.com/embed2.html?lat='+la+'&lon='+lo+'&detailLat='+la+'&detailLon='+lo+'&zoom=9&level=surface&overlay='+o+'&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=m%2Fs&metricTemp=%C2%B0C&radarRange=-1';
+  box.innerHTML='<iframe src="'+src+'" title="Windy 날씨 지도" loading="lazy"></iframe><div class="sub" style="margin-top:6px">지도가 안 보이면 <a href="https://www.windy.com/?'+o+','+la+','+lo+',9">Windy에서 크게 보기</a></div>';
+}
+document.querySelectorAll('#wmapbtn button').forEach(b=>b.addEventListener('click',()=>openWindy(b.dataset.o)));
 function renderPicker(){
+  renderMap();
   const box=document.getElementById('regions');
   box.innerHTML=REGIONS.map(r=>'<button type="button" data-r="'+r.id+'"'+(r.id===RID?' aria-current="true"':'')+'><b>'+esc(r.name)+(regionCtl(r)?' <span class="ctl">통제</span>':'')+'</b><span>'+esc(r.title)+'</span><small>'+esc(r.desc)+'</small></button>').join('');
   box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setRegion(b.dataset.r,true)));
@@ -937,7 +1006,7 @@ buildFromFallback();renderToday();
   if(/[?&](r|install)=/.test(location.search)){try{history.replaceState(null,'',location.pathname)}catch(e){}}
   if(REGIONS.some(r=>r.id===id))setRegion(id);else openPicker();
 })();
-loadKomsa();loadTomorrow();loadWarn();loadNotices();
+loadKomsa();loadTomorrow();loadWarn();loadNotices();loadNow();setInterval(loadNow,30*60000);
 setInterval(()=>{renderAll();renderTide()},30000);
 setInterval(loadKomsa,5*60000);setInterval(loadTomorrow,30*60000);setInterval(loadWarn,10*60000);setInterval(loadNotices,10*60000);setInterval(()=>{if(RID)loadWeather()},30*60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadKomsa()});
