@@ -369,7 +369,7 @@ function saveSel(){SEL[RID]={g:grp,dir};LS.set('wando-sel',JSON.stringify(SEL))}
 function setRegion(id,fromUser){
   const R=REGIONS.find(r=>r.id===id);if(!R)return;
   RID=id;LS.set('wando-region',id);
-  const s=SEL[id]||{};grp=R.groups.some(g=>g.id===s.g)?s.g:R.groups[0].id;dir=s.dir==='in'?'in':'out';
+  const s=SEL[id]||{};grp=R.groups.some(g=>g.id===s.g)?s.g:R.groups[0].id;dir=s.dir==='in'||s.dir==='out'?s.dir:(R.defaultDir||'out');
   document.getElementById('picker').hidden=true;document.getElementById('main').hidden=false;document.getElementById('btn-region').hidden=false;
   document.getElementById('rname').textContent=R.name;document.getElementById('rtitle').textContent=R.title;
   document.title='완도뱃길 – '+R.name+' 배·물때·날씨';

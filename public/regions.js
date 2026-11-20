@@ -198,14 +198,14 @@
       wx: { nx: 63, ny: 58, label: '금당도' }, tide: { lat: '34.43', lot: '127.11', label: '가학항 부근' },
       warn: [W_WANDO, W_GOHEUNG, W_SEA_W, W_SEA_E],
       groups: [
-        { id: 'dm', label: '당목(약산)', lines: [L(RE.dangmokGahak, '가학항 → 당목항(약산)', '당목항(약산) → 가학항', '선사 확인 중', { band: BAND.komsa, note: '공단 자료의 항로 이름을 확인한 뒤 맞출 예정입니다. 결항·변경 소식은 공단 완도운항관리센터 밴드에 올라옵니다.' })], tmr: byRe(RE.dangmokGahak) },
         { id: 'nr', label: '노력', lines: [L(RE.gahak, '가학항 → 노력항', '노력항 → 가학항', '완도농협 완농페리2호 · 약 20분')], tmr: byRe(/노력/) },
+        { id: 'dm', label: '당목(약산)', lines: [L(RE.dangmokGahak, '가학항 → 당목항(약산)', '당목항(약산) → 가학항', '선사 확인 중', { band: BAND.komsa, note: '공단 운항 자료(2026.11.20 확인)에는 이 노선이 없습니다. 결항·변경 소식은 공단 완도운항관리센터 밴드에서 확인하세요.' })], tmr: byRe(RE.dangmokGahak) },
         { id: 'nd', label: '고흥 쪽', optional: true, lines: [L(RE.geumdangNd, '금당 → 녹동·우두', '녹동·우두 → 금당', '고흥 쪽 선사')], tmr: byRe(RE.geumdangNd) },
       ],
       bands: [BAND.geumdang], tels: [], links: [],
     },
     {
-      id: 'deogu', kw: /덕우|황제/, name: '덕우·황제', title: '덕우도·황제도', desc: '완도↔덕우(모황·생일 경유)',
+      id: 'deogu', defaultDir: 'in', kw: /덕우|황제/, name: '덕우·황제', title: '덕우도·황제도', desc: '완도↔덕우(모황·생일 경유)',
       home: /^(덕우|황제)/, dir: ['섬에서 나가기', '섬으로 들어오기'],
       wx: { nx: 62, ny: 54, label: '덕우도' }, tide: { lat: '34.24', lot: '127.03', label: '덕우도 부근' },
       warn: [W_WANDO, W_SEA_W, W_SEA_E, W_FAR_E],
