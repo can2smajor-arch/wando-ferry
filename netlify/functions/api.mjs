@@ -54,6 +54,12 @@ async function getJson(url, params) {
   try { return JSON.parse(text); } catch { throw new Error("응답이 JSON이 아님: " + text.slice(0, 200).replace(/serviceKey=[^&\s"]+/g, "serviceKey=***")); }
 }
 const arr = (x) => (Array.isArray(x) ? x : x ? [x] : []);
+// 공공데이터 응답에 header·body가 없으면 (인증키 오류 등) 받은 내용을 짧게 보여 주며 오류로 처리
+function mustHave(data, ok, what) {
+  if (ok) return;
+  const snip = JSON.stringify(data ?? null).slice(0, 240).replace(/serviceKey=[^&\s"]+/g, "serviceKey=***");
+  throw new Error(`${what} 응답 형식이 다름(인증키 확인 필요): ${snip}`);
+}
 
 // ───── KOMSA 오늘 운항 (허브) ─────
 export function compactKomsa(items) {
@@ -92,6 +98,7 @@ async function komsa(key) {
   const data = await getJson(FERRY_URL, { serviceKey: key, pageNo: "1", numOfRows: "1000", dataType: "JSON", rlvtYmd: date });
   const header = data?.response?.header;
   if (header && header.resultCode !== "200" && header.resultCode !== "00") throw new Error(`KOMSA 오류 ${header.resultCode} ${header.resultMsg}`);
+  mustHave(data, data?.response?.body, "KOMSA");
   const total = data?.response?.body?.totalCount;
   const c = compactKomsa(arr(data?.response?.body?.items?.item));
   return { ok: true, date, fetched: new Date().toISOString(), total, ...c };
@@ -104,6 +111,7 @@ async function tomorrow(key) {
   const data = await getJson(TMR_URL, { serviceKey: key, pageNo: "1", numOfRows: "1000", ilja: date });
   const code = data?.header?.resultCode;
   if (code && code !== "SC000" && code !== "00") throw new Error(`운항예보 오류 ${code} ${data?.header?.resultMsg || ""}`);
+  mustHave(data, data?.body || data?.header, "운항예보");
   const rows = arr(data?.body?.dataList);
   if (!rows.length) return { ok: false, error: hourKst < 12 ? "내일 운항예보는 매일 12시쯤 발표됩니다." : "아직 내일 운항예보가 발표되지 않았습니다." };
   const out = rows
@@ -129,6 +137,7 @@ async function weather(key, region) {
   });
   const h = data?.response?.header;
   if (h && h.resultCode !== "00") throw new Error(`기상청 오류 ${h.resultCode} ${h.resultMsg}`);
+  mustHave(data, data?.response?.body, "기상청");
   const map = {};
   for (const x of arr(data?.response?.body?.items?.item)) {
     const k = x.fcstDate + x.fcstTime;
@@ -279,8 +288,15 @@ async function band() {
   return { ok: true, fetched: new Date().toISOString(), bands: bandKeys.map((b) => b.name), items };
 }
 
+// 인증키 정리: 앞뒤 빈칸·따옴표 제거, Encoding 키(%2B 등)를 넣었으면 Decoding 키로 풀어서 씀
+export function cleanKey(k) {
+  k = String(k || "").trim().replace(/^["']|["']$/g, "");
+  if (/%[0-9A-Fa-f]{2}/.test(k)) { try { k = decodeURIComponent(k); } catch { /* 그대로 */ } }
+  return k;
+}
+
 export default async (req) => {
-  const key = process.env.DATA_GO_KR_KEY;
+  const key = cleanKey(process.env.DATA_GO_KR_KEY);
   const parts = new URL(req.url).pathname.split("/").filter(Boolean); // ["api", which, region?]
   const which = parts[1], region = REGIONS.find((r) => r.id === parts[2]);
   if (!key && which !== "band" && !(which === "komsa" && process.env.KOMSA_HUB_URL)) return json({ ok: false, error: "DATA_GO_KR_KEY 환경변수가 없습니다" }, 60);

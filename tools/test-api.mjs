@@ -36,3 +36,8 @@ let n = 0; for (let m = 0; m < 1440; ) { const s = komsaCacheSeconds(new Date(Da
 // 키가 오류 문구에 새지 않는지
 globalThis.fetch = async (url) => new Response("<html>SERVICE KEY IS NOT REGISTERED " + url + "</html>");
 console.log("err", (await get("/api/komsa")).j.error.includes("TESTKEY") ? "키 노출!" : "키 가림 OK");
+// 키 정리·형식 오류 점검
+const { cleanKey } = await import("../netlify/functions/api.mjs");
+console.log("cleanKey", cleanKey(' "abc%2Bdef%3D%3D" '), cleanKey("abc+def=="));
+globalThis.fetch = async () => new Response(JSON.stringify({ resultCode: "30", resultMsg: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" }));
+console.log("형식 오류 →", (await get("/api/weather/soan")).j.error);
