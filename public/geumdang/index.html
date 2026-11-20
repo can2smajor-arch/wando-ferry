@@ -181,6 +181,13 @@ html.big{zoom:1.2}
 .wx-hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
 .wx-hours div{flex:0 0 auto;min-width:62px;border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;display:flex;flex-direction:column;gap:1px;font-size:12px;font-variant-numeric:tabular-nums}
 .wx-hours b{font-size:15px}
+.wx-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.wx-line .temp{font-family:var(--f-display);font-size:34px;line-height:1}
+.wx-line .cond{font-size:15px;font-weight:600}
+.wx-line .kv{font-size:14px;color:var(--mute)}
+.wx-line .kv b{color:#10233a;padding:1px 6px;border-radius:6px}
+.wx-more summary{font-size:13px;color:var(--mute);cursor:pointer;padding:2px 0}
+.wx-more .wx-days{margin-top:6px}
 .wxt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
 .wxt{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:13px;min-width:100%}
 .wxt th,.wxt td{padding:5px 0;text-align:center;min-width:44px;white-space:nowrap}
@@ -322,15 +329,9 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
     <section class="card" id="weather">
       <h2><span><span id="wxname">날씨</span> <span id="wxbadge"></span></span><small id="wxsrc">기상청 단기예보</small></h2>
       <div class="wxwarn" id="wxwarn"></div>
-      <div id="wxbody" style="display:flex;flex-direction:column;gap:12px"></div>
-      <div class="sunrow" id="sun" aria-label="일출·일몰"></div>
-    </section>
-
-    <section class="card wmap" id="wmap">
-      <h2>움직이는 바람·비 지도 <small>Windy</small></h2>
-      <div class="sub">지도를 열면 데이터를 많이 씁니다(와이파이 권장). 필요할 때만 여세요.</div>
-      <div class="row" id="wmapbtn"><button type="button" data-o="wind">바람</button><button type="button" data-o="rain">비</button><button type="button" data-o="waves">파도</button></div>
-      <div id="wmapbox"></div>
+      <div class="sub" id="sun" aria-label="일출·일몰"></div>
+      <div id="wxbody" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="wmap"><div class="row" id="wmapbtn"><span class="sub" style="align-self:center">움직이는 지도</span><button type="button" data-o="wind">바람</button><button type="button" data-o="rain">비</button><button type="button" data-o="waves">파도</button></div><div id="wmapbox"></div></div>
     </section>
 
     <section class="card" id="tide">
@@ -469,7 +470,7 @@ function openWindy(o){
   document.querySelectorAll('#wmapbtn button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.o===o));
   const la=R.map?R.map.lat:34.25,lo=R.map?R.map.lon:126.8;
   const src='https://embed.windy.com/embed2.html?lat='+la+'&lon='+lo+'&detailLat='+la+'&detailLon='+lo+'&zoom=9&level=surface&overlay='+o+'&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=m%2Fs&metricTemp=%C2%B0C&radarRange=-1';
-  box.innerHTML='<iframe src="'+src+'" title="Windy 날씨 지도" loading="lazy"></iframe><div class="sub" style="margin-top:6px">지도가 안 보이면 <a href="https://www.windy.com/?'+o+','+la+','+lo+',9">Windy에서 크게 보기</a></div>';
+  box.innerHTML='<iframe src="'+src+'" title="Windy 날씨 지도" loading="lazy"></iframe><div class="sub" style="margin-top:6px">데이터를 많이 씁니다(와이파이 권장). 안 보이면 <a href="https://www.windy.com/?'+o+','+la+','+lo+',9">Windy에서 크게 보기</a></div>';
 }
 document.querySelectorAll('#wmapbtn button').forEach(b=>b.addEventListener('click',()=>openWindy(b.dataset.o)));
 function renderPicker(){
@@ -820,7 +821,7 @@ function renderSun(){
   const R=cur(),box=document.getElementById('sun');if(!R||!box)return;
   const k=kst(),lat=+R.tide.lat,lon=+R.tide.lot,t=sunTimes(ymd(k),lat,lon),tm=sunTimes(fromDayNum(dayNum(ymd(k))+1),lat,lon);
   if(!t){box.innerHTML='';return}
-  box.innerHTML='<div><span>일출</span><b>'+hm(t.rise)+'</b></div><div><span>일몰</span><b>'+hm(t.set)+'</b></div><div><span>'+(k.min>t.set?'내일 일출':'낮 길이')+'</span><b>'+(k.min>t.set&&tm?hm(tm.rise):dur(t.set-t.rise))+'</b></div>';
+  box.textContent=(k.min>t.set&&tm?'내일 일출 '+hm(tm.rise):'일출 '+hm(t.rise))+' · 일몰 '+hm(t.set);
   box.title=R.tide.label+' 위치로 계산한 값입니다(1~2분 차이 가능).';
 }
 
@@ -865,7 +866,7 @@ function wxTable(H,k){
     row('풍향','ar',(h,i)=>td(h,i,'<span style="transform:rotate('+((h.vec+180)%360)+'deg)" title="'+dirTxt(h.vec)+'풍">↑</span>'))+
     row('파고 m','wv',(h,i)=>td(h,i,h.wav==null?'-':h.wav.toFixed(1),wavC(h.wav)))+
   '</table></div>'+
-  '<div class="wxt-legend"><span>바람·파고</span><span><i class="c0"></i>잔잔</span><span><i class="c1"></i>보통</span><span><i class="c2"></i>주의</span><span><i class="c3"></i>강함</span><span><i class="c4"></i>매우 강함</span><span>· 화살표는 바람이 부는 쪽 · 옆으로 밀어 보세요</span></div>';
+  '<div class="wxt-legend"><span><i class="c0"></i>잔잔</span><span><i class="c2"></i>주의</span><span><i class="c4"></i>매우 강함</span><span>· 옆으로 밀어 보세요 →</span></div>';
 }
 function renderWeather(){
   const body=document.getElementById('wxbody');
@@ -889,13 +890,11 @@ function renderWeather(){
       '<span class="ex">바람 최대 <b class="lv-'+windLv(w)+'">'+w+'m/s</b> · 파고 최대 <b class="lv-'+wavLv(wv)+'">'+wv+'m</b> · 비 확률 '+pop+'%</span></div>';
   }).join('');
   body.innerHTML=
-    '<div class="wx-now"><span class="temp">'+now.tmp+'°</span><div><div class="cond">'+condTxt(now)+'</div><div class="sub">'+(+now.t.slice(0,2))+'시 기준 · 습도 '+now.reh+'%</div></div></div>'+
-    '<div class="wx-stats"><div><span>바람</span><b class="lv-'+windLv(now.wsd)+'">'+now.wsd+'<small>m/s</small></b><small>'+dirTxt(now.vec)+'풍 · '+windTxt(now.wsd)+'</small></div>'+
-    '<div><span>파고</span><b class="lv-'+wavLv(now.wav||0)+'">'+(now.wav??'-')+'<small>m</small></b><small>'+((now.wav||0)>=3?'풍랑 우려':(now.wav||0)>=2?'다소 높음':'잔잔한 편')+'</small></div>'+
-    '<div><span>비 확률</span><b>'+now.pop+'<small>%</small></b><small>'+(now.pcp&&now.pcp!=='강수없음'&&now.pcp!=='0'?esc(now.pcp):'강수 없음')+'</small></div></div>'+
+    '<div class="wx-line"><span class="temp">'+now.tmp+'°</span><span class="cond">'+wxIcon(now,false)+' '+condTxt(now)+'</span>'+
+      '<span class="kv">바람 <b class="'+wsdC(now.wsd)+'">'+now.wsd+'m/s</b> '+dirTxt(now.vec)+'풍</span><span class="kv">파고 <b class="'+wavC(now.wav)+'">'+(now.wav??'-')+'m</b></span></div>'+
     wxTable(H,k)+
-    '<div class="wx-days">'+days+'</div>'+
-    '<div class="sub">빨강은 기상청 풍랑주의보 기준(바람 14m/s, 파고 3m)입니다. 노랑·주황은 그보다 낮은 참고 단계입니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div>';
+    '<details class="wx-more"><summary>날짜별 요약 · 색 기준</summary><div class="wx-days">'+days+'</div>'+
+    '<div class="sub">빨강은 기상청 풍랑주의보 기준(바람 14m/s, 파고 3m), 노랑·주황은 그보다 낮은 참고 단계입니다. 배 운항은 운항예보와 선사 공지로 확인하세요.</div></details>';
 }
 
 // ───────── 기상특보 (지역 구역만) ─────────
