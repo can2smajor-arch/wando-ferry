@@ -53,7 +53,8 @@
     iljeong: /일정/,
     dongsong: /동송/,
     seoseong: /서성/,
-    gahak: /가학|노력/,
+    gahak: /노력/,
+    dangmokGahak: /당목.*(가학|금당)|(가학|금당).*당목/,
     geumdangNd: /(녹동|우두).*금당|금당.*(녹동|우두)/,
   };
 
@@ -192,12 +193,13 @@
       bands: [BAND.dangmok], tels: [], links: [],
     },
     {
-      id: 'geumdang', kw: /가학|금당|노력/, name: '금당', title: '금당도 (가학)', desc: '가학↔노력, 고흥 쪽 배',
+      id: 'geumdang', kw: /가학|금당|노력/, name: '금당', title: '금당도 (가학)', desc: '가학↔당목(약산), 가학↔노력, 고흥 쪽 배',
       home: /^(가학|금당|울포|차우)/, dir: ['금당에서 나가기', '금당으로 들어오기'],
       wx: { nx: 63, ny: 58, label: '금당도' }, tide: { lat: '34.43', lot: '127.11', label: '가학항 부근' },
       warn: [W_WANDO, W_GOHEUNG, W_SEA_W, W_SEA_E],
       groups: [
-        { id: 'nr', label: '노력', lines: [L(RE.gahak, '가학항 → 노력항', '노력항 → 가학항', '완도농협 · 약 20분')], tmr: byRe(/가학|노력/) },
+        { id: 'dm', label: '당목(약산)', lines: [L(RE.dangmokGahak, '가학항 → 당목항(약산)', '당목항(약산) → 가학항', '선사 확인 중', { note: '공단 자료의 항로 이름을 확인한 뒤 맞출 예정입니다. 시간이 안 나오면 선사·매표소에 확인하세요.' })], tmr: byRe(RE.dangmokGahak) },
+        { id: 'nr', label: '노력', lines: [L(RE.gahak, '가학항 → 노력항', '노력항 → 가학항', '완도농협 완농페리2호 · 약 20분')], tmr: byRe(/노력/) },
         { id: 'nd', label: '고흥 쪽', optional: true, lines: [L(RE.geumdangNd, '금당 → 녹동·우두', '녹동·우두 → 금당', '고흥 쪽 선사')], tmr: byRe(RE.geumdangNd) },
       ],
       bands: [BAND.geumdang], tels: [], links: [],
