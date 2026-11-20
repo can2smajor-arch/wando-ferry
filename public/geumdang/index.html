@@ -688,7 +688,7 @@ function renderTide(){
   document.getElementById('events').innerHTML=dayEv.map(e=>'<div><span>'+(e.hi?'만조':'간조')+'</span><b>'+e.t+'</b><span>'+e.c+'cm</span></div>').join('');
   const bed=TIDE_SRC==='live'&&TIDE_META&&TIDE_META.kind==='bed';
   document.getElementById('tidebase').textContent=bed?R.tide.label+' 기준':'완도항 예보 기준';
-  document.getElementById('tidesrc').textContent=TIDE_SRC==='live'?(bed?R.tide.label+' 예측 조위'+(TIDE_META.base?' ('+TIDE_META.base+' 기준'+(TIDE_META.josi?' '+TIDE_META.josi:'')+')':'')+' · 국립해양조사원 · '+kstTime(TIDE_META.fetched)+' 갱신':'국립해양조사원 완도 예보 · '+kstTime(TIDE_META.fetched)+' 갱신 · '+R.tide.label+'과는 시각 차이가 날 수 있습니다.'):'비상용 저장 자료(완도항, 11/17~11/30)입니다. '+R.tide.label+'과는 차이가 날 수 있습니다.';
+  document.getElementById('tidesrc').textContent=TIDE_SRC==='live'?(bed?R.tide.label+' 예측 조위'+(TIDE_META.base?' ('+TIDE_META.base+' 기준'+(/\d/.test(TIDE_META.josi||'')?' '+TIDE_META.josi:'')+')':'')+' · 국립해양조사원 · '+kstTime(TIDE_META.fetched)+' 갱신':'국립해양조사원 완도 예보 · '+kstTime(TIDE_META.fetched)+' 갱신 · '+R.tide.label+'과는 시각 차이가 날 수 있습니다.'):'비상용 저장 자료(완도항, 11/17~11/30)입니다. '+R.tide.label+'과는 차이가 날 수 있습니다.';
   document.getElementById('tidesrc').textContent+=' 그래프의 옅은 회색은 해가 진 시간입니다.';
 }
 
