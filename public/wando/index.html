@@ -231,8 +231,8 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
 :root[data-theme="dark"] .imap{background:#0f2a3d}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .imap{background:#0f2a3d}}
 .imap svg{display:block;width:100%;height:auto}
-.imap .land{fill:#e8e2cf;stroke:#b9b29a;stroke-width:.8}
-.imap .main{fill:#ddd6bf}
+.imap .land{fill:#e9e2c8;stroke:#a89f80;stroke-width:.5;stroke-linejoin:round}
+.imap .main{fill:#d6cfb6}
 .imap .iname{font-size:8.5px;fill:#6d6650;font-family:var(--f-body)}
 .imap .rg{cursor:pointer}
 .imap .rg rect{fill:#fff;stroke:#123d63;stroke-width:1.2;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.25))}
@@ -366,6 +366,7 @@ footer{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4
   </footer>
 </div>
 <script src="/regions.js"></script>
+<script src="/map-paths.js"></script>
 <script>
 if('serviceWorker' in navigator&&location.hostname.endsWith('netlify.app')){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
 const REGIONS=window.WANDO_REGIONS||[];
@@ -432,7 +433,7 @@ function openPicker(){
 let NOW=null;
 async function loadNow(){const j=await api('/api/now');NOW=!j?sampleNow():(j.ok?j:null);if(!document.getElementById('picker').hidden)renderMap()}
 function sampleNow(){const w=[11,12,10,9,7,8,6,9];return{ok:true,sample:true,regions:REGIONS.map((r,i)=>({id:r.id,ok:true,tmp:8+(i%3),sky:i%2?4:3,pty:i<3?1:0,wsd:w[i%w.length],vec:320,wav:+(w[i%w.length]/4.5).toFixed(1)}))}}
-const MAPB={lat0:33.95,lat1:34.48,lon0:126.45,lon1:127.20,W:360,H:330};
+const MAPB=(window.WANDO_MAP&&WANDO_MAP.bounds)||{lat0:33.95,lat1:34.48,lon0:126.40,lon1:127.25,W:360,H:330};
 const mx=lon=>(lon-MAPB.lon0)/(MAPB.lon1-MAPB.lon0)*MAPB.W,my=lat=>(MAPB.lat1-lat)/(MAPB.lat1-MAPB.lat0)*MAPB.H;
 // 섬 모양은 위치만 맞춘 단순한 타원 (실제 해안선 아님)
 const ISLES=[['완도',34.33,126.73,30,17,-18],['신지도',34.325,126.83,15,5,0],['고금도',34.39,126.81,17,12,0],['약산',34.39,126.90,11,9,0],['노화도',34.195,126.575,13,9,0],['보길도',34.165,126.555,12,7,0],
@@ -441,10 +442,13 @@ function renderMap(){
   const box=document.getElementById('imap');if(!box)return;
   const W=MAPB.W,H=MAPB.H;
   let g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="완도 섬 지도(개략도)">';
-  // 육지(해남·강진·고흥 쪽) 대략
-  g+='<path class="land main" d="M0 0H175L165 22L120 40L95 70L72 66L50 92L20 80L0 96Z"/><path class="land main" d="M300 0H360V120L338 95L330 60L310 40Z"/>';
-  g+='<text class="iname" x="18" y="40">해남</text><text class="iname" x="330" y="40">고흥</text>';
-  ISLES.forEach(([n,la,lo,rx,ry,rot])=>{const x=mx(lo),y=my(la);g+='<ellipse class="land" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+' '+x.toFixed(1)+' '+y.toFixed(1)+')"/>'+(rx>=9?'<text class="iname" x="'+(x-rx).toFixed(0)+'" y="'+(y+ry+9).toFixed(0)+'">'+n+'</text>':'')});
+  // 해안선: 통계청 시군구 경계(단순화). 완도군 섬은 진하게, 주변 육지는 옅게
+  const LM=window.WANDO_MAP&&WANDO_MAP.land;
+  if(LM){Object.entries(LM).forEach(([n,d])=>{g+='<path class="land'+(n==='완도군'?'':' main')+'" d="'+d+'"/>'});}
+  else ISLES.forEach(([n,la,lo,rx,ry,rot])=>{const x=mx(lo),y=my(la);g+='<ellipse class="land" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="'+rx+'" ry="'+ry+'" transform="rotate('+rot+' '+x.toFixed(1)+' '+y.toFixed(1)+')"/>'});
+  // 섬 이름
+  ISLES.forEach(([n,la,lo,rx,ry])=>{if(rx>=9){const x=mx(lo),y=my(la);g+='<text class="iname" x="'+(x-rx).toFixed(0)+'" y="'+(y+ry+9).toFixed(0)+'">'+n+'</text>'}});
+  g+='<text class="iname" x="40" y="60">해남</text><text class="iname" x="150" y="30">강진</text><text class="iname" x="320" y="70">고흥</text>';
   const OFF={nw:[-78,-40],w:[-80,-6],e:[6,-18],s:[-36,8],n:[-36,-46]};
   REGIONS.forEach(r=>{
     if(!r.map)return;const x=mx(r.map.lon),y=my(r.map.lat),[dx,dy]=OFF[r.map.at]||OFF.s,bx=Math.max(2,Math.min(W-76,x+dx)),by=Math.max(2,Math.min(H-38,y+dy));
@@ -455,7 +459,7 @@ function renderMap(){
       '<text class="nm" x="'+(bx+6)+'" y="'+(by+14)+'">'+esc(r.name)+(regionCtl(r)?' ⚠':'')+'</text><text class="tv" x="'+(bx+6)+'" y="'+(by+29)+'">'+line+'</text></g>'+
       '<circle class="dot" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.2"/>';
   });
-  g+='</svg><div class="note">'+(NOW&&NOW.sample?'예시 날씨 · ':'')+'위치만 맞춘 개략도 · 바람은 지금 기준</div>';
+  g+='</svg><div class="note">'+(NOW&&NOW.sample?'예시 날씨 · ':'')+'바람은 지금 기준 · 지도: 통계청 경계</div>';
   box.innerHTML=g;
   box.querySelectorAll('.rg').forEach(el=>{const go=()=>setRegion(el.dataset.r,true);el.addEventListener('click',go);el.addEventListener('keydown',e=>{if(e.key==='Enter')go()})});
 }
